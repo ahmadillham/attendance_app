@@ -1,0 +1,629 @@
+import 'dart:async';
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:camera/camera.dart';
+import 'package:geolocator/geolocator.dart';
+import '../constants/theme.dart';
+import '../constants/mock_data.dart';
+import '../services/api_service.dart';
+
+/// AttendanceScreen — Modern Clean Design
+/// ─────────────────────────────────────────────
+/// Camera + GPS verification with frosted glass panels
+/// and smooth scanning animation.
+class AttendanceScreen extends StatefulWidget {
+  const AttendanceScreen({super.key});
+
+  @override
+  State<AttendanceScreen> createState() => _AttendanceScreenState();
+}
+
+class _AttendanceScreenState extends State<AttendanceScreen> with TickerProviderStateMixin {
+  CameraController? _cameraController;
+  bool _cameraInitialized = false;
+  bool _cameraPermissionDenied = false;
+  bool _locationPermissionDenied = false;
+
+  double? _currentLat;
+  double? _currentLng;
+  double? _distance;
+  bool _isInRange = false;
+  bool _isScanning = false;
+  Map<String, dynamic>? _result;
+  bool _showResult = false;
+
+  late AnimationController _scanAnimController;
+  late Animation<double> _scanAnim;
+  late AnimationController _pulseAnimController;
+  late Animation<double> _pulseAnim;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _scanAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    );
+    _scanAnim = Tween<double>(begin: -110, end: 110).animate(
+      CurvedAnimation(parent: _scanAnimController, curve: Curves.easeInOut),
+    );
+
+    _pulseAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+    _pulseAnim = Tween<double>(begin: 1.0, end: 1.08).animate(
+      CurvedAnimation(parent: _pulseAnimController, curve: Curves.easeInOut),
+    );
+    _pulseAnimController.repeat(reverse: true);
+
+    _initCamera();
+    _initLocation();
+  }
+
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    _scanAnimController.dispose();
+    _pulseAnimController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initCamera() async {
+    try {
+      final cameras = await availableCameras();
+      final front = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.first,
+      );
+      _cameraController = CameraController(front, ResolutionPreset.high);
+      await _cameraController!.initialize();
+      if (mounted) setState(() => _cameraInitialized = true);
+    } catch (e) {
+      if (mounted) setState(() => _cameraPermissionDenied = true);
+    }
+  }
+
+  Future<void> _initLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) setState(() => _locationPermissionDenied = true);
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) setState(() => _locationPermissionDenied = true);
+          return;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _locationPermissionDenied = true);
+        return;
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      final dist = _haversineDistance(pos.latitude, pos.longitude, Campus.latitude, Campus.longitude);
+      if (mounted) {
+        setState(() {
+          _currentLat = pos.latitude;
+          _currentLng = pos.longitude;
+          _distance = dist;
+          _isInRange = dist <= Campus.allowedRadiusMeters;
+        });
+      }
+    } catch (e) {
+      debugPrint('Location error: $e');
+    }
+  }
+
+  double _haversineDistance(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371e3;
+    final dLat = (lat2 - lat1) * pi / 180;
+    final dLon = (lon2 - lon1) * pi / 180;
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) * sin(dLon / 2) * sin(dLon / 2);
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a));
+  }
+
+  Future<void> _handleCapture() async {
+    // Start scanning animation
+    setState(() => _isScanning = true);
+    _scanAnimController.repeat(reverse: true);
+
+    try {
+      // 1. Eksekusi Native Camera API
+      final XFile picture = await _cameraController!.takePicture();
+      if (!mounted) return;
+
+      // 2. Kirim Gambar Fisik ke Backend Node.js
+      final reqSuccess = await ApiService.submitAttendance(
+        courseId: "cl_dummy_01",
+        meetingCount: 1, 
+        status: "present",
+        latitude: _currentLat ?? 0.0,
+        longitude: _currentLng ?? 0.0,
+        imagePath: picture.path,
+      );
+
+      _scanAnimController.stop();
+      setState(() {
+         _isScanning = false;
+         if (reqSuccess) {
+           _result = {'success': true, 'message': 'Absensi berhasil divalidasi dan tersimpan di database!'};
+         } else {
+           _result = {'success': false, 'message': 'Terjadi kesalahan sistem saat menghubungi backend.'};
+         }
+         _showResult = true;
+      });
+    } catch (e) {
+      _scanAnimController.stop();
+      setState(() {
+        _isScanning = false;
+        _result = {'success': false, 'message': 'Gagal memproses gambar kamera: $e'};
+        _showResult = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Camera permission denied
+    if (_cameraPermissionDenied) {
+      return _buildPermissionScreen(
+        icon: Icons.camera_alt_outlined,
+        title: 'Izin Kamera Diperlukan',
+        desc: 'Aplikasi membutuhkan akses kamera untuk verifikasi wajah.',
+        buttonText: 'Beri Izin Kamera',
+        onPressed: _initCamera,
+      );
+    }
+
+    // Location permission denied
+    if (_locationPermissionDenied) {
+      return _buildPermissionScreen(
+        icon: Icons.location_off_outlined,
+        title: 'Izin Lokasi Diperlukan',
+        desc: 'Aplikasi membutuhkan akses lokasi untuk memvalidasi kehadiran Anda.',
+      );
+    }
+
+    // Camera not initialized yet
+    if (!_cameraInitialized || _cameraController == null) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light,
+        child: Stack(
+          children: [
+            // Camera preview
+            Positioned.fill(child: CameraPreview(controller: _cameraController!)),
+
+            // Overlay
+            Positioned.fill(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Top bar
+                  Container(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).padding.top + 8,
+                      left: 16,
+                      right: 16,
+                      bottom: 12,
+                    ),
+                    color: Colors.black.withValues(alpha: 0.25),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.chevron_left, size: 22, color: AppColors.white),
+                          ),
+                        ),
+                        const Text(
+                          'Verifikasi Wajah',
+                          style: TextStyle(
+                            fontSize: AppFonts.h3,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.white,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(width: 40),
+                      ],
+                    ),
+                  ),
+
+                  // Face frame
+                  Column(
+                    children: [
+                      SizedBox(
+                        width: 250,
+                        height: 250,
+                        child: Stack(
+                          children: [
+                            // Corner markers
+                            _buildCorner(top: 0, left: 0, topLeft: true),
+                            _buildCorner(top: 0, right: 0, topRight: true),
+                            _buildCorner(bottom: 0, left: 0, bottomLeft: true),
+                            _buildCorner(bottom: 0, right: 0, bottomRight: true),
+
+                            // Scan line
+                            if (_isScanning)
+                              AnimatedBuilder(
+                                animation: _scanAnim,
+                                builder: (context2, child2) => Positioned(
+                                  top: 125 + _scanAnim.value,
+                                  left: 12,
+                                  right: 12,
+                                  child: Container(
+                                    height: 2,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.accent,
+                                      borderRadius: BorderRadius.circular(1),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.accent.withValues(alpha: 0.6),
+                                          blurRadius: 8,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _isScanning ? 'Memindai wajah…' : 'Posisikan wajah di dalam bingkai',
+                        style: TextStyle(
+                          fontSize: AppFonts.caption,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Bottom panel
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 36),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(AppRadius.xl),
+                        topRight: Radius.circular(AppRadius.xl),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        // Location chip
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: _isInRange
+                                ? const Color(0x2614B8A6)
+                                : const Color(0x26F59E0B),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _isInRange ? Icons.check_circle : Icons.error,
+                                size: 18,
+                                color: _isInRange ? const Color(0xFF14B8A6) : const Color(0xFFF59E0B),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _distance != null
+                                      ? _isInRange
+                                          ? 'Dalam jangkauan (${_distance!.round()}m)'
+                                          : 'Di luar jangkauan (${_distance!.round()}m)'
+                                      : 'Mengambil lokasi…',
+                                  style: const TextStyle(
+                                    fontSize: AppFonts.caption,
+                                    color: AppColors.white,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Capture button
+                        AnimatedBuilder(
+                          animation: _pulseAnim,
+                          builder: (_, child) => Transform.scale(
+                            scale: _isScanning ? 1.0 : _pulseAnim.value,
+                            child: child,
+                          ),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                boxShadow: AppShadows.glow,
+                              ),
+                              child: ElevatedButton(
+                                onPressed: _isScanning ? null : _handleCapture,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.7),
+                                  foregroundColor: AppColors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: _isScanning
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: AppColors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.face, size: 22),
+                                          SizedBox(width: 10),
+                                          Text(
+                                            'Verifikasi Sekarang',
+                                            style: TextStyle(
+                                              fontSize: AppFonts.body,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Result Modal
+            if (_showResult)
+              Container(
+                color: AppColors.overlay,
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(32),
+                    constraints: const BoxConstraints(maxWidth: 340),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      boxShadow: AppShadows.medium,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 84,
+                          height: 84,
+                          decoration: BoxDecoration(
+                            color: _result?['success'] == true ? AppColors.accentSurface : AppColors.dangerSurface,
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          child: Icon(
+                            _result?['success'] == true ? Icons.check_circle : Icons.cancel,
+                            size: 52,
+                            color: _result?['success'] == true ? AppColors.accent : AppColors.danger,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _result?['success'] == true ? 'Berhasil!' : 'Gagal',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _result?['message'] ?? '',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: AppFonts.body,
+                            color: AppColors.textSecondary,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() => _showResult = false);
+                              if (_result?['success'] == true) Navigator.of(context).pop();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _result?['success'] == true ? AppColors.accent : AppColors.primary,
+                              foregroundColor: AppColors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              _result?['success'] == true ? 'Kembali ke Dashboard' : 'Coba Lagi',
+                              style: const TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCorner({
+    double? top,
+    double? bottom,
+    double? left,
+    double? right,
+    bool topLeft = false,
+    bool topRight = false,
+    bool bottomLeft = false,
+    bool bottomRight = false,
+  }) {
+    return Positioned(
+      top: top,
+      bottom: bottom,
+      left: left,
+      right: right,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          border: Border(
+            top: topLeft || topRight ? const BorderSide(color: AppColors.white, width: 3) : BorderSide.none,
+            bottom: bottomLeft || bottomRight ? const BorderSide(color: AppColors.white, width: 3) : BorderSide.none,
+            left: topLeft || bottomLeft ? const BorderSide(color: AppColors.white, width: 3) : BorderSide.none,
+            right: topRight || bottomRight ? const BorderSide(color: AppColors.white, width: 3) : BorderSide.none,
+          ),
+          borderRadius: BorderRadius.only(
+            topLeft: topLeft ? const Radius.circular(16) : Radius.zero,
+            topRight: topRight ? const Radius.circular(16) : Radius.zero,
+            bottomLeft: bottomLeft ? const Radius.circular(16) : Radius.zero,
+            bottomRight: bottomRight ? const Radius.circular(16) : Radius.zero,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPermissionScreen({
+    required IconData icon,
+    required String title,
+    required String desc,
+    String? buttonText,
+    VoidCallback? onPressed,
+  }) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderLight,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Icon(icon, size: 48, color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: AppFonts.h2,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  desc,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: AppFonts.body,
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
+                if (buttonText != null && onPressed != null) ...[
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: onPressed,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                    ),
+                    child: Text(buttonText, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Camera Preview Widget
+class CameraPreview extends StatelessWidget {
+  final CameraController controller;
+
+  const CameraPreview({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!controller.value.isInitialized) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    }
+    return CameraPreview._buildPreview(controller);
+  }
+
+  static Widget _buildPreview(CameraController controller) {
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: controller.value.previewSize?.height ?? 1,
+        height: controller.value.previewSize?.width ?? 1,
+        child: controller.buildPreview(),
+      ),
+    );
+  }
+}
