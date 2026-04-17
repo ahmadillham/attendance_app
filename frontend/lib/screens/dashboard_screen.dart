@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../constants/theme.dart';
 import '../constants/mock_data.dart';
-import '../services/api_service.dart';
 import '../providers/app_provider.dart';
 
 /// DashboardScreen — Modern Clean Design
@@ -39,8 +38,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context) {
           if (provider.isLoadingDashboard && provider.dashboardData == null) {
             return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-          } else if (provider.errorMessage != null && provider.dashboardData == null) {
-             return Center(child: Text('Error: ${provider.errorMessage}'));
+          } else if (provider.dashboardError != null && provider.dashboardData == null) {
+             return Center(child: Text('Error: ${provider.dashboardError}'));
           } else if (provider.dashboardData == null) {
              return const Center(child: Text('Tidak ada data didapat'));
           }
@@ -53,7 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             );
           }).toList();
           final stats = student.attendanceSummary;
-          final attendancePercent = (stats.present / stats.total * 100).round();
+          final attendancePercent = stats.percentage;
           const dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
           final todayDay = dayNames[DateTime.now().weekday - 1];
 

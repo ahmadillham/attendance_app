@@ -23,7 +23,7 @@ class ScheduleItem {
     return ScheduleItem(
       id: json['id']?.toString() ?? '',
       subject: course['name'] ?? json['subject'] ?? 'Unknown',
-      time: '${json['startTime']} – ${json['endTime']}',
+      time: '${json['startTime'] ?? '??:??'} – ${json['endTime'] ?? '??:??'}',
       room: json['room'] ?? 'Unknown',
       lecturer: course['lecturer'] ?? json['lecturer'] ?? 'Unknown',
       status: 'upcoming',

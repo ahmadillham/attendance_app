@@ -109,6 +109,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   Future<void> _handleBiometricLogin() async {
+    // Check if saved credentials exist from a previous NIM+password login
+    final hasCredentials = await ApiService.hasSavedCredentials();
+    if (!hasCredentials) {
+      if (mounted) {
+        _showAlert(
+          'Login Diperlukan',
+          'Silakan masuk dengan NIM dan password terlebih dahulu. Setelah itu, Anda bisa menggunakan ${_getBiometricLabel()} untuk login berikutnya.',
+        );
+      }
+      return;
+    }
+
     try {
       final result = await _localAuth.authenticate(
         localizedReason: 'Masuk dengan ${_getBiometricLabel()}',
@@ -117,12 +129,25 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           biometricOnly: false,
         ),
       );
-      if (result && mounted) {
-        // 🔌 BACKEND: POST /api/auth/biometric-verify
+      if (!result || !mounted) return;
+
+      // Re-authenticate with the backend using saved credentials
+      setState(() => _isLoading = true);
+      final success = await ApiService.loginWithSavedCredentials();
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (success) {
         Navigator.of(context).pushReplacementNamed('/main');
+      } else {
+        _showAlert(
+          'Sesi Habis',
+          'Gagal masuk otomatis. Silakan masuk dengan NIM dan password.',
+        );
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Terjadi kesalahan saat autentikasi biometrik.')),
         );

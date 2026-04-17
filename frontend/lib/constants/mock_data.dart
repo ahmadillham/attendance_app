@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import '../models/models.dart';
 
 // Re-export models so existing imports from mock_data.dart still work
@@ -52,16 +51,6 @@ const Map<String, List<ScheduleItem>> mockWeeklySchedule = {
   'Jumat': [],
   'Sabtu': [],
 };
-
-// ─── Mock Tasks ──────────────────────────────────────────────────
-const List<TaskItem> mockTasks = [
-  TaskItem(id: 't1', subject: 'Pemrograman Berbasis Mobile', title: 'Membuat Aplikasi To-Do List', description: 'Buat aplikasi To-Do List sederhana menggunakan Flutter.', deadline: '2026-04-15', priority: 'high', completed: false),
-  TaskItem(id: 't2', subject: 'Analisis Dan Desain Perangkat Lunak', title: 'Dokumen SRS', description: 'Membuat Software Requirements Specification untuk projek akhir.', deadline: '2026-04-12', priority: 'high', completed: false),
-  TaskItem(id: 't3', subject: 'Internet Of Things', title: 'Rangkaian Sensor DHT11', description: 'Merangkai dan memprogram sensor DHT11 dengan Arduino.', deadline: '2026-04-20', priority: 'medium', completed: false),
-  TaskItem(id: 't4', subject: 'Komputasi Paralel Dan Terdistribusi', title: 'Implementasi MPI', description: 'Implementasikan program paralel sederhana menggunakan MPI.', deadline: '2026-04-18', priority: 'medium', completed: false),
-  TaskItem(id: 't5', subject: 'Logika Matematika', title: 'Latihan Soal Logika Proposisi', description: 'Kerjakan soal latihan bab logika proposisi dan predikat.', deadline: '2026-04-05', priority: 'high', completed: true),
-  TaskItem(id: 't6', subject: 'Interaksi Manusia & Komputer', title: 'Desain Wireframe Aplikasi', description: 'Buat wireframe untuk aplikasi mobile menggunakan Figma.', deadline: '2026-04-06', priority: 'low', completed: true),
-];
 
 // ─── Mock Attendance History ─────────────────────────────────────
 final List<CourseAttendance> mockAttendanceHistory = [

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../constants/theme.dart';
 import '../constants/mock_data.dart';
-import '../services/api_service.dart';
 import '../providers/app_provider.dart';
 
 /// HistoryScreen — Attendance history per course
@@ -29,20 +28,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
     });
   }
 
-  Map<String, int> _getCourseSummary(CourseAttendance course) {
-    final present = course.records.where((r) => r.status == 'present').length;
-    final absent = course.records.where((r) => r.status == 'absent').length;
-    final leave = course.records.where((r) => r.status == 'leave').length;
-    final percent = (present / course.records.length * 100).round();
-    return {'present': present, 'absent': absent, 'leave': leave, 'percent': percent};
+  String _formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+      return '${days[date.weekday % 7]}, ${date.day} ${months[date.month - 1]}';
+    } catch (_) {
+      return dateStr;
+    }
   }
 
-  String _formatDate(String dateStr) {
-    final date = DateTime.parse(dateStr);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-    const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-    return '${days[date.weekday % 7]}, ${date.day} ${months[date.month - 1]}';
-  }
 
   void _showCourseDetail(BuildContext context, CourseAttendance course) {
     showModalBottomSheet(
@@ -208,8 +204,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
         builder: (context) {
           if (provider.isLoadingHistory && provider.attendanceHistory == null) {
             return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-          } else if (provider.errorMessage != null && provider.attendanceHistory == null) {
-             return Center(child: Text('Error: ${provider.errorMessage}'));
+          } else if (provider.historyError != null && provider.attendanceHistory == null) {
+             return Center(child: Text('Error: ${provider.historyError}'));
           } else if (provider.attendanceHistory == null || provider.attendanceHistory!.isEmpty) {
              return const Center(child: Text('Tidak ada riwayat kehadiran'));
           }
@@ -273,7 +269,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 child: Column(
                   children: [
                     ...historyList.map((course) {
-                      final summary = _getCourseSummary(course);
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
@@ -320,23 +315,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 ),
                                 clipBehavior: Clip.antiAlias,
                                 child: Row(
-                                  children: [
-                                    if ((summary['present'] as int) > 0)
-                                      Expanded(
-                                        flex: summary['present'] as int,
-                                        child: Container(color: const Color(0xFF14B8A6)),
-                                      ),
-                                    if ((summary['leave'] as int) > 0)
-                                      Expanded(
-                                        flex: summary['leave'] as int,
-                                        child: Container(color: const Color(0xFFF59E0B)),
-                                      ),
-                                    if ((summary['absent'] as int) > 0)
-                                      Expanded(
-                                        flex: summary['absent'] as int,
-                                        child: Container(color: const Color(0xFFEF4444)),
-                                      ),
-                                  ],
+                                children: [
+                                  if (course.presentCount > 0)
+                                    Expanded(
+                                      flex: course.presentCount,
+                                      child: Container(color: const Color(0xFF14B8A6)),
+                                    ),
+                                  if (course.leaveCount > 0)
+                                    Expanded(
+                                      flex: course.leaveCount,
+                                      child: Container(color: const Color(0xFFF59E0B)),
+                                    ),
+                                  if (course.absentCount > 0)
+                                    Expanded(
+                                      flex: course.absentCount,
+                                      child: Container(color: const Color(0xFFEF4444)),
+                                    ),
+                                ],
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -344,11 +339,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               // Mini stats
                               Row(
                                 children: [
-                                  _miniStat(const Color(0xFF14B8A6), 'Hadir ${summary['present']}'),
+                                  _miniStat(const Color(0xFF14B8A6), 'Hadir ${course.presentCount}'),
                                   const SizedBox(width: 12),
-                                  _miniStat(const Color(0xFFEF4444), 'Absen ${summary['absent']}'),
+                                  _miniStat(const Color(0xFFEF4444), 'Absen ${course.absentCount}'),
                                   const SizedBox(width: 12),
-                                  _miniStat(const Color(0xFFF59E0B), 'Izin ${summary['leave']}'),
+                                  _miniStat(const Color(0xFFF59E0B), 'Izin ${course.leaveCount}'),
                                   const Spacer(),
                                   const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
                                 ],
@@ -363,7 +358,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     const SizedBox(height: 20),
                   ],
                 ),
-              ),
               ),
               ),
             ),

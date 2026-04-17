@@ -7,8 +7,6 @@ datasource db {
   provider = "mysql"
 }
 
-// ─── Enums ──────────────────────────────────────────────────────
-
 enum AttendanceStatus {
   present
   absent
@@ -30,28 +28,19 @@ enum DayOfWeek {
   Sabtu
 }
 
-enum Priority {
-  low
-  medium
-  high
-}
-
-// ─── Models ─────────────────────────────────────────────────────
-
 model Student {
   id             String         @id @default(uuid())
-  studentId      String         @unique // NIM
+  studentId      String         @unique 
   name           String
   email          String         @unique
   phone          String?
   department     String
   faculty        String
   semester       Int
-  password       String         // For Authentication
-  faceDescriptor Json?          // Store 128D Float32Array face embedding
+  password       String         
+  faceDescriptor Json?          
   attendances    Attendance[]
   leaveRequests  LeaveRequest[]
-  tasks          Task[]
   enrollments    Enrollment[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -81,8 +70,8 @@ model Enrollment {
 model Schedule {
   id             String         @id @default(uuid())
   dayOfWeek      DayOfWeek
-  startTime      String         // e.g. 09:45
-  endTime        String         // e.g. 11:00
+  startTime      String         
+  endTime        String         
   room           String
   courseId        String
   course         Course         @relation(fields: [courseId], references: [id])
@@ -105,25 +94,12 @@ model Attendance {
 
 model LeaveRequest {
   id             String         @id @default(uuid())
-  reason         String         // Sakit, Izin, etc.
+  reason         String         
   description    String?        @db.Text
-  evidenceUrl    String?        // Lampiran file dokumen PDF/Image
+  evidenceUrl    String?        
   status         LeaveStatus    @default(PENDING)
   dateFrom       DateTime       
   dateTo         DateTime
-  studentId      String
-  student        Student        @relation(fields: [studentId], references: [id])
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-}
-
-model Task {
-  id             String         @id @default(uuid())
-  title          String
-  description    String?        @db.Text
-  deadline       DateTime
-  priority       Priority       @default(medium)
-  completed      Boolean        @default(false)
   studentId      String
   student        Student        @relation(fields: [studentId], references: [id])
   createdAt      DateTime       @default(now())

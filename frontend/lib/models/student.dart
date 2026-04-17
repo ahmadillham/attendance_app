@@ -68,5 +68,5 @@ class AttendanceSummary {
     );
   }
 
-  int get percentage => (present / total * 100).round();
+  int get percentage => total == 0 ? 0 : (present / total * 100).round();
 }

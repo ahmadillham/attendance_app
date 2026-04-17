@@ -6,12 +6,14 @@ class ScreenHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
   final VoidCallback? onBack;
+  final Widget? action;
 
   const ScreenHeader({
     super.key,
     required this.title,
     this.subtitle,
     this.onBack,
+    this.action,
   });
 
   @override
@@ -77,6 +79,7 @@ class ScreenHeader extends StatelessWidget {
               ],
             ),
           ),
+          if (action != null) action!,
         ],
       ),
     );

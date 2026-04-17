@@ -7,9 +7,12 @@ import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/attendance_screen.dart';
 import 'screens/leave_request_screen.dart';
+import 'screens/leave_history_screen.dart';
 import 'screens/schedule_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/splash_screen.dart';
+import 'screens/face_register_screen.dart';
 
 /// App Entry Point
 /// ─────────────────────────────────────────────
@@ -46,9 +49,14 @@ class AbsensiApp extends StatelessWidget {
           fontFamily: 'Roboto',
           useMaterial3: true,
         ),
-        initialRoute: '/login',
+        initialRoute: '/splash',
         onGenerateRoute: (settings) {
           switch (settings.name) {
+            case '/splash':
+              return MaterialPageRoute(
+                builder: (_) => const SplashScreen(),
+                settings: settings,
+              );
             case '/login':
               return MaterialPageRoute(
                 builder: (_) => const LoginScreen(),
@@ -59,6 +67,11 @@ class AbsensiApp extends StatelessWidget {
                 builder: (_) => const MainScreen(),
                 settings: settings,
               );
+            case '/face-register':
+              return MaterialPageRoute(
+                builder: (_) => const FaceRegisterScreen(),
+                settings: settings,
+              );
             case '/attendance':
               return MaterialPageRoute(
                 builder: (_) => const AttendanceScreen(),
@@ -67,6 +80,11 @@ class AbsensiApp extends StatelessWidget {
             case '/leave-request':
               return MaterialPageRoute(
                 builder: (_) => const LeaveRequestScreen(),
+                settings: settings,
+              );
+            case '/leave-history':
+              return MaterialPageRoute(
+                builder: (_) => const LeaveHistoryScreen(),
                 settings: settings,
               );
             default:

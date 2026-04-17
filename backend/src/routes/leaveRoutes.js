@@ -5,9 +5,12 @@ const authMiddleware = require('../middlewares/authMiddleware');
 const upload = require('../middlewares/uploadMiddleware');
 const { leaveValidation } = require('../validations/attendanceValidation');
 
+const fs = require('fs');
+
 // POST /api/leave-requests — Submit a new leave request
 router.post('/', authMiddleware, upload.single('document'), async (req, res) => {
     try {
+        fs.appendFileSync('leave_log.txt', JSON.stringify(req.body) + '\n');
         // Validate input
         const { error } = leaveValidation({
             reason: req.body.reason,
@@ -15,7 +18,10 @@ router.post('/', authMiddleware, upload.single('document'), async (req, res) => 
             dateFrom: req.body.dateFrom,
             dateTo: req.body.dateTo,
         });
-        if (error) return res.status(400).json({ message: error.details[0].message });
+        if (error) {
+            fs.appendFileSync('leave_log.txt', 'VALIDATION ERROR: ' + error.details[0].message + '\n');
+            return res.status(400).json({ message: error.details[0].message });
+        }
 
         const { reason, description, dateFrom, dateTo } = req.body;
         const studentId = req.user.id;
@@ -38,6 +44,7 @@ router.post('/', authMiddleware, upload.single('document'), async (req, res) => 
         });
         res.status(201).json(leaveRequest);
     } catch (err) {
+        fs.appendFileSync('leave_log.txt', 'SERVER ERROR: ' + err.message + '\n');
         res.status(500).json({ message: err.message });
     }
 });

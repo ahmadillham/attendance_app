@@ -16,8 +16,10 @@ class ScheduleScreen extends StatefulWidget {
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
   late int _selectedDay;
-  List<ScheduleItem> _daySchedule = [];
-  bool _isLoading = false;
+  bool _isLoading = true;
+
+  // Cache: fetch all days once, filter locally on tab switch
+  Map<String, List<ScheduleItem>> _weeklyCache = {};
 
   @override
   void initState() {
@@ -30,25 +32,47 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     } else {
       _selectedDay = today - 1;
     }
-    _fetchSchedule();
+    _fetchAllSchedules();
   }
 
-  Future<void> _fetchSchedule() async {
+  /// Fetch all 6 days in parallel once, then cache
+  Future<void> _fetchAllSchedules() async {
     setState(() => _isLoading = true);
-    final result = await ApiService.getSchedulesByDay(_days[_selectedDay]);
-    if (mounted) {
-      setState(() {
-        _daySchedule = result;
-        _isLoading = false;
-      });
+
+    try {
+      // Fire all 6 requests in parallel
+      final futures = _days.map((day) => ApiService.getSchedulesByDay(day));
+      final results = await Future.wait(futures);
+
+      if (mounted) {
+        final cache = <String, List<ScheduleItem>>{};
+        for (int i = 0; i < _days.length; i++) {
+          cache[_days[i]] = results[i];
+        }
+        setState(() {
+          _weeklyCache = cache;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // Fallback to mock data
+      if (mounted) {
+        setState(() {
+          _weeklyCache = Map<String, List<ScheduleItem>>.from(mockWeeklySchedule);
+          _isLoading = false;
+        });
+      }
     }
   }
 
   void _selectDay(int index) {
     if (index == _selectedDay) return;
     setState(() => _selectedDay = index);
-    _fetchSchedule();
+    // No API call — just re-render from cache (instant!)
   }
+
+  List<ScheduleItem> get _daySchedule =>
+      _weeklyCache[_days[_selectedDay]] ?? [];
 
   @override
   Widget build(BuildContext context) {
@@ -143,157 +167,166 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
             // Schedule list
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                child: daySchedule.isEmpty
-                    ? Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(48),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                          boxShadow: AppShadows.card,
-                        ),
-                        child: Column(
-                          children: [
-                            const Icon(Icons.coffee, size: 48, color: AppColors.textMuted),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Tidak ada jadwal',
-                              style: TextStyle(
-                                fontSize: AppFonts.body,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Tidak ada jadwal kuliah untuk hari ini. Selamat beristirahat!',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: AppFonts.caption,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : Column(
-                        children: [
-                          ...daySchedule.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final item = entry.value;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Timeline bar
-                                  SizedBox(
-                                    width: 24,
-                                    child: Column(
-                                      children: [
-                                        const SizedBox(height: 6),
-                                        Container(
-                                          width: 10,
-                                          height: 10,
-                                          decoration: BoxDecoration(
-                                            color: index == 0 ? AppColors.accent : AppColors.primary,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        if (index < daySchedule.length - 1)
-                                          Container(
-                                            width: 2,
-                                            height: 80,
-                                            margin: const EdgeInsets.only(top: 4),
-                                            color: AppColors.border,
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Card content
-                                  Expanded(
-                                    child: Container(
-                                      margin: const EdgeInsets.only(left: 10, bottom: 10),
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surface,
-                                        borderRadius: BorderRadius.circular(AppRadius.md),
-                                        boxShadow: AppShadows.card,
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppColors.primary),
+                    )
+                  : RefreshIndicator(
+                      color: AppColors.primary,
+                      onRefresh: _fetchAllSchedules,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                        child: daySchedule.isEmpty
+                            ? Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(48),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                                  boxShadow: AppShadows.card,
+                                ),
+                                child: Column(
+                                  children: [
+                                    const Icon(Icons.coffee, size: 48, color: AppColors.textMuted),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'Tidak ada jadwal',
+                                      style: TextStyle(
+                                        fontSize: AppFonts.body,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary,
                                       ),
-                                      child: Column(
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'Tidak ada jadwal kuliah untuk hari ini. Selamat beristirahat!',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: AppFonts.caption,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : Column(
+                                children: [
+                                  ...daySchedule.asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final item = entry.value;
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Row(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(
-                                                item.time,
-                                                style: const TextStyle(
-                                                  fontSize: AppFonts.small,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: AppColors.primary,
-                                                ),
-                                              ),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.borderLight,
-                                                  borderRadius: BorderRadius.circular(6),
-                                                ),
-                                                child: Text(
-                                                  item.room,
-                                                  style: const TextStyle(
-                                                    fontSize: AppFonts.small,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: AppColors.textMuted,
+                                          // Timeline bar
+                                          SizedBox(
+                                            width: 24,
+                                            child: Column(
+                                              children: [
+                                                const SizedBox(height: 6),
+                                                Container(
+                                                  width: 10,
+                                                  height: 10,
+                                                  decoration: BoxDecoration(
+                                                    color: index == 0 ? AppColors.accent : AppColors.primary,
+                                                    shape: BoxShape.circle,
                                                   ),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            item.subject,
-                                            style: const TextStyle(
-                                              fontSize: AppFonts.body,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.textPrimary,
+                                                if (index < daySchedule.length - 1)
+                                                  Container(
+                                                    width: 2,
+                                                    height: 80,
+                                                    margin: const EdgeInsets.only(top: 4),
+                                                    color: AppColors.border,
+                                                  ),
+                                              ],
                                             ),
                                           ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              const Padding(
-                                                padding: EdgeInsets.only(top: 2),
-                                                child: Icon(Icons.person_outline, size: 12, color: AppColors.textMuted),
+                                          // Card content
+                                          Expanded(
+                                            child: Container(
+                                              margin: const EdgeInsets.only(left: 10, bottom: 10),
+                                              padding: const EdgeInsets.all(16),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.surface,
+                                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                                boxShadow: AppShadows.card,
                                               ),
-                                              const SizedBox(width: 4),
-                                              Expanded(
-                                                child: Text(
-                                                  item.lecturer,
-                                                  style: const TextStyle(
-                                                    fontSize: AppFonts.small,
-                                                    color: AppColors.textMuted,
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        item.time,
+                                                        style: const TextStyle(
+                                                          fontSize: AppFonts.small,
+                                                          fontWeight: FontWeight.w700,
+                                                          color: AppColors.primary,
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                        decoration: BoxDecoration(
+                                                          color: AppColors.borderLight,
+                                                          borderRadius: BorderRadius.circular(6),
+                                                        ),
+                                                        child: Text(
+                                                          item.room,
+                                                          style: const TextStyle(
+                                                            fontSize: AppFonts.small,
+                                                            fontWeight: FontWeight.w600,
+                                                            color: AppColors.textMuted,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    item.subject,
+                                                    style: const TextStyle(
+                                                      fontSize: AppFonts.body,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: AppColors.textPrimary,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Row(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      const Padding(
+                                                        padding: EdgeInsets.only(top: 2),
+                                                        child: Icon(Icons.person_outline, size: 12, color: AppColors.textMuted),
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Expanded(
+                                                        child: Text(
+                                                          item.lecturer,
+                                                          style: const TextStyle(
+                                                            fontSize: AppFonts.small,
+                                                            color: AppColors.textMuted,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
                                               ),
-                                            ],
+                                            ),
                                           ),
                                         ],
                                       ),
-                                    ),
-                                  ),
+                                    );
+                                  }),
+                                  const SizedBox(height: 20),
                                 ],
                               ),
-                            );
-                          }),
-                          const SizedBox(height: 20),
-                        ],
                       ),
-              ),
+                    ),
             ),
           ],
         ),

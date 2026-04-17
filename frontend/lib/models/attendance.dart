@@ -26,15 +26,15 @@ class CourseAttendance {
   final int totalMeetings;
   final List<AttendanceRecord> records;
 
-  const CourseAttendance({
+  CourseAttendance({
     required this.subject,
     required this.lecturer,
     required this.totalMeetings,
-    required this.records,
-  });
+    List<AttendanceRecord>? records,
+  }) : records = records ?? [];
 
   int get presentCount => records.where((r) => r.status == 'present').length;
   int get absentCount => records.where((r) => r.status == 'absent').length;
   int get leaveCount => records.where((r) => r.status == 'leave').length;
-  int get percentage => (presentCount / records.length * 100).round();
+  int get percentage => records.isEmpty ? 0 : (presentCount / records.length * 100).round();
 }

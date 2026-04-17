@@ -1,31 +1,27 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import '../models/models.dart';
 import '../constants/mock_data.dart';
 
 class AppProvider extends ChangeNotifier {
   // ─── Dashboard ─────────────────────────────────────────────────
   DashboardData? dashboardData;
   bool isLoadingDashboard = false;
+  String? dashboardError;
 
   // ─── Attendance History ────────────────────────────────────────
   List<CourseAttendance>? attendanceHistory;
   bool isLoadingHistory = false;
+  String? historyError;
 
   // ─── Profile ───────────────────────────────────────────────────
   Student? studentProfile;
   bool isLoadingProfile = false;
-
-  // ─── Tasks ─────────────────────────────────────────────────────
-  List<TaskItem>? tasks;
-  bool isLoadingTasks = false;
+  String? profileError;
 
   // ─── Leave Requests ────────────────────────────────────────────
   List<LeaveRequest>? leaveHistory;
   bool isLoadingLeave = false;
-
-  // ─── Global ────────────────────────────────────────────────────
-  String? errorMessage;
+  String? leaveError;
 
   // ════════════════════════════════════════════════════════════════
   // Dashboard
@@ -35,13 +31,13 @@ class AppProvider extends ChangeNotifier {
     if (dashboardData != null && !forceRefresh) return;
 
     isLoadingDashboard = true;
-    errorMessage = null;
+    dashboardError = null;
     notifyListeners();
 
     try {
       dashboardData = await ApiService.getDashboardData();
     } catch (e) {
-      errorMessage = e.toString();
+      dashboardError = e.toString();
     } finally {
       isLoadingDashboard = false;
       notifyListeners();
@@ -56,13 +52,13 @@ class AppProvider extends ChangeNotifier {
     if (attendanceHistory != null && !forceRefresh) return;
 
     isLoadingHistory = true;
-    errorMessage = null;
+    historyError = null;
     notifyListeners();
 
     try {
       attendanceHistory = await ApiService.getAttendanceHistory();
     } catch (e) {
-      errorMessage = e.toString();
+      historyError = e.toString();
     } finally {
       isLoadingHistory = false;
       notifyListeners();
@@ -77,60 +73,17 @@ class AppProvider extends ChangeNotifier {
     if (studentProfile != null && !forceRefresh) return;
 
     isLoadingProfile = true;
-    errorMessage = null;
+    profileError = null;
     notifyListeners();
 
     try {
       studentProfile = await ApiService.getProfile();
     } catch (e) {
-      errorMessage = e.toString();
+      profileError = e.toString();
       studentProfile = mockStudent; // fallback
     } finally {
       isLoadingProfile = false;
       notifyListeners();
-    }
-  }
-
-  // ════════════════════════════════════════════════════════════════
-  // Tasks
-  // ════════════════════════════════════════════════════════════════
-
-  Future<void> fetchTasks({bool forceRefresh = false}) async {
-    if (tasks != null && !forceRefresh) return;
-
-    isLoadingTasks = true;
-    errorMessage = null;
-    notifyListeners();
-
-    try {
-      tasks = await ApiService.getTasks();
-    } catch (e) {
-      errorMessage = e.toString();
-      tasks = mockTasks; // fallback
-    } finally {
-      isLoadingTasks = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> toggleTaskComplete(String taskId, bool completed) async {
-    final success = await ApiService.updateTask(taskId, {'completed': completed});
-    if (success) {
-      // Update local state
-      final index = tasks?.indexWhere((t) => t.id == taskId) ?? -1;
-      if (index >= 0 && tasks != null) {
-        final old = tasks![index];
-        tasks![index] = TaskItem(
-          id: old.id,
-          title: old.title,
-          description: old.description,
-          deadline: old.deadline,
-          priority: old.priority,
-          completed: completed,
-          subject: old.subject,
-        );
-        notifyListeners();
-      }
     }
   }
 
@@ -142,13 +95,13 @@ class AppProvider extends ChangeNotifier {
     if (leaveHistory != null && !forceRefresh) return;
 
     isLoadingLeave = true;
-    errorMessage = null;
+    leaveError = null;
     notifyListeners();
 
     try {
       leaveHistory = await ApiService.getLeaveHistory();
     } catch (e) {
-      errorMessage = e.toString();
+      leaveError = e.toString();
     } finally {
       isLoadingLeave = false;
       notifyListeners();
@@ -163,9 +116,11 @@ class AppProvider extends ChangeNotifier {
     dashboardData = null;
     attendanceHistory = null;
     studentProfile = null;
-    tasks = null;
     leaveHistory = null;
-    errorMessage = null;
+    dashboardError = null;
+    historyError = null;
+    profileError = null;
+    leaveError = null;
     notifyListeners();
   }
 }

@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 import '../constants/theme.dart';
 import '../constants/mock_data.dart';
 import '../services/api_service.dart';
+import '../providers/app_provider.dart';
 
 /// AttendanceScreen — Modern Clean Design
 /// ─────────────────────────────────────────────
@@ -32,6 +34,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
   bool _isScanning = false;
   Map<String, dynamic>? _result;
   bool _showResult = false;
+  ScheduleItem? _activeSchedule; // dynamically resolved from today's schedule
 
   late AnimationController _scanAnimController;
   late Animation<double> _scanAnim;
@@ -61,6 +64,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
 
     _initCamera();
     _initLocation();
+    _resolveActiveSchedule();
   }
 
   @override
@@ -133,6 +137,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
     return R * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
 
+  void _resolveActiveSchedule() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<AppProvider>();
+      final todaySchedules = provider.dashboardData?.todaySchedules ?? [];
+      if (todaySchedules.isNotEmpty) {
+        // Pick the first schedule item (most likely the current/active class)
+        setState(() => _activeSchedule = todaySchedules.first);
+      }
+    });
+  }
+
   Future<void> _handleCapture() async {
     // Start scanning animation
     setState(() => _isScanning = true);
@@ -144,9 +159,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
       if (!mounted) return;
 
       // 2. Kirim Gambar Fisik ke Backend Node.js
+      final activeCourseId = _activeSchedule?.courseId ?? 'cl_logmat';
       final reqSuccess = await ApiService.submitAttendance(
-        courseId: "cl_dummy_01",
-        meetingCount: 1, 
+        courseId: activeCourseId,
         status: "present",
         latitude: _currentLat ?? 0.0,
         longitude: _currentLng ?? 0.0,

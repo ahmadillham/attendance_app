@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import '../constants/theme.dart';
 import '../widgets/screen_header.dart';
+import '../widgets/section_label.dart';
 import '../services/api_service.dart';
 
 /// LeaveRequestScreen — Modern Clean Design
@@ -39,11 +40,12 @@ class LeaveRequestScreen extends StatefulWidget {
 }
 
 class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
-  DateTime _startDate = DateTime.now();
-  DateTime _endDate = DateTime.now();
+  DateTime _startDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+  DateTime _endDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
   String? _reason;
   final _descriptionController = TextEditingController();
   PlatformFile? _document;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -75,8 +77,6 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
     }
   }
 
-  bool _isSubmitting = false;
-
   Future<void> _handleSubmit() async {
     if (_reason == null) {
       _showAlert('Peringatan', 'Pilih alasan izin.');
@@ -89,13 +89,20 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
 
     setState(() => _isSubmitting = true);
 
-    final reqSuccess = await ApiService.submitLeaveRequest(
-      leaveType: _reason!,
-      startDate: _startDate.toIso8601String(),
-      endDate: _endDate.toIso8601String(),
-      reason: _descriptionController.text.trim(),
-      document: _document,
-    );
+    bool reqSuccess = false;
+    String errorMsg = 'Terjadi kesalahan saat mengirim pengajuan.';
+
+    try {
+      reqSuccess = await ApiService.submitLeaveRequest(
+        leaveType: _reason!,
+        startDate: _startDate.toIso8601String(),
+        endDate: _endDate.toIso8601String(),
+        reason: _descriptionController.text.trim(),
+        document: _document,
+      );
+    } catch (e) {
+      errorMsg = e.toString().replaceAll('Exception: ', '');
+    }
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);
@@ -108,7 +115,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
         onDismiss: () => Navigator.of(context).pop(),
       );
     } else {
-      _showAlert('❌ Gagal', 'Terjadi kesalahan saat mengirim pengajuan. Coba lagi nanti.');
+      _showAlert('❌ Gagal', errorMsg);
     }
   }
 
@@ -381,6 +388,13 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
               title: 'Ajukan Perizinan',
               subtitle: 'Lengkapi formulir berikut',
               onBack: () => Navigator.of(context).pop(),
+              action: IconButton(
+                icon: const Icon(Icons.history, color: AppColors.white),
+                tooltip: 'Riwayat Izin',
+                onPressed: () {
+                  Navigator.pushNamed(context, '/leave-history');
+                },
+              ),
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -389,7 +403,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // ── Date Range ─────────────────
-                    _sectionLabel('TANGGAL IZIN'),
+                    const SectionLabel('TANGGAL IZIN'),
                     Row(
                       children: [
                         Expanded(
@@ -480,7 +494,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                     ),
 
                     // ── Reason Picker ─────────────────
-                    _sectionLabel('ALASAN IZIN'),
+                    const SectionLabel('ALASAN IZIN'),
                     GestureDetector(
                       onTap: _showReasonPicker,
                       child: Container(
@@ -523,7 +537,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                     ),
 
                     // ── Description ───────────────────
-                    _sectionLabel('KETERANGAN'),
+                    const SectionLabel('KETERANGAN'),
                     Container(
                       decoration: BoxDecoration(
                         color: AppColors.surface,
@@ -565,7 +579,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                     ),
 
                     // ── Document Upload ───────────────
-                    _sectionLabel('DOKUMEN PENDUKUNG'),
+                    const SectionLabel('DOKUMEN PENDUKUNG'),
                     GestureDetector(
                       onTap: _handleDocumentPick,
                       child: Container(
@@ -671,20 +685,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
     );
   }
 
-  Widget _sectionLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 24, bottom: 10),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textMuted,
-          letterSpacing: 1,
-        ),
-      ),
-    );
-  }
+
 }
 
 class _PickerColumn extends StatelessWidget {

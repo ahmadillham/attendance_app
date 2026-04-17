@@ -21,6 +21,8 @@ const adapter = new PrismaMariaDb({
     user: dbConfig.user,
     password: dbConfig.password,
     database: dbConfig.database,
+    // Required for MySQL 8+ with caching_sha2_password
+    allowPublicKeyRetrieval: true,
 });
 
 const prisma = new PrismaClient({ adapter });

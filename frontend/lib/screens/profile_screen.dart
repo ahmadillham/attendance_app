@@ -5,6 +5,7 @@ import '../constants/theme.dart';
 import '../constants/mock_data.dart';
 import '../services/api_service.dart';
 import '../providers/app_provider.dart';
+import '../widgets/section_label.dart';
 
 /// ProfileScreen — Academic info, settings, logout
 class ProfileScreen extends StatefulWidget {
@@ -310,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Academic Info
-                    _sectionLabel('INFORMASI AKADEMIK'),
+                    const SectionLabel('INFORMASI AKADEMIK'),
                     _infoCard([
                       _InfoRowData(Icons.school_outlined, 'Program Studi', student.department),
                       _InfoRowData(Icons.business_outlined, 'Fakultas', student.faculty),
@@ -318,13 +319,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _InfoRowData(Icons.bar_chart_outlined, 'Kehadiran', '$attendancePercent%', isLast: true),
                     ]),
 
-                    _sectionLabel('INFORMASI KONTAK'),
+                    const SectionLabel('INFORMASI KONTAK'),
                     _infoCard([
                       _InfoRowData(Icons.mail_outlined, 'Email', student.email, isEditable: true),
                       _InfoRowData(Icons.phone_outlined, 'Telepon', student.phone, isLast: true, isEditable: true),
                     ]),
 
-                    _sectionLabel('PENGATURAN'),
+                    const SectionLabel('PENGATURAN'),
 
                     // Change Photo
                     _actionCard(
@@ -333,6 +334,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       iconColor: AppColors.primary,
                       label: 'Ubah Foto Profil',
                       onTap: _handleChangePhoto,
+                    ),
+
+                    // Face Registration
+                    _actionCard(
+                      icon: Icons.face_retouching_natural,
+                      iconBg: AppColors.success,
+                      iconColor: AppColors.white,
+                      label: 'Daftarkan Wajah (FaceID)',
+                      onTap: () => Navigator.pushNamed(context, '/face-register'),
                     ),
 
                     // Change Password
@@ -368,20 +378,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _sectionLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 24, bottom: 10),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textMuted,
-          letterSpacing: 1,
-        ),
-      ),
-    );
-  }
+
 
   Widget _infoCard(List<_InfoRowData> rows) {
     return Container(
