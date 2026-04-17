@@ -7,6 +7,11 @@ datasource db {
   provider = "mysql"
 }
 
+enum UserRole {
+  STUDENT
+  LECTURER
+}
+
 enum AttendanceStatus {
   present
   absent
@@ -46,11 +51,27 @@ model Student {
   updatedAt      DateTime       @updatedAt
 }
 
+model Lecturer {
+  id             String         @id @default(uuid())
+  lecturerId     String         @unique   // NIP
+  name           String
+  email          String         @unique
+  phone          String?
+  department     String
+  faculty        String
+  password       String
+  courses        Course[]
+  reviewedLeaves LeaveRequest[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
 model Course {
   id             String         @id @default(uuid())
   code           String         @unique
   name           String
-  lecturer       String
+  lecturerId     String
+  lecturer       Lecturer       @relation(fields: [lecturerId], references: [id])
   schedules      Schedule[]
   attendances    Attendance[]
   enrollments    Enrollment[]
@@ -102,6 +123,11 @@ model LeaveRequest {
   dateTo         DateTime
   studentId      String
   student        Student        @relation(fields: [studentId], references: [id])
+  reviewedById   String?
+  reviewedBy     Lecturer?      @relation(fields: [reviewedById], references: [id])
+  reviewedAt     DateTime?
+  reviewNote     String?        @db.Text
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 }
+

@@ -58,29 +58,48 @@ async function main() {
 
   console.log(`✅ Profil Mahasiswa: ${student.name} (Sandi: Password123)`);
 
-  // 4. Memasukkan Mata Kuliah (sesuai mock_data.dart)
+  // 4. Memasukkan / Memperbarui Akun Dosen
+  const lecturer = await prisma.lecturer.upsert({
+    where: { lecturerId: '198501012020' },
+    update: {
+      password: hashedPassword,
+    },
+    create: {
+      lecturerId: '198501012020',
+      name: 'Dr. Budi Santoso, M.Kom.',
+      email: 'budi.santoso@unuha.ac.id',
+      phone: '0813-3000-1234',
+      department: 'Teknik Informatika',
+      faculty: 'Fakultas Sains dan Teknologi',
+      password: hashedPassword,
+    }
+  });
+
+  console.log(`✅ Profil Dosen: ${lecturer.name} (NIP: ${lecturer.lecturerId}, Sandi: Password123)`);
+
+  // 5. Memasukkan Mata Kuliah (terhubung ke Lecturer)
   const coursesData = [
-    { id: 'cl_logmat',     code: 'CL01', name: 'Logika Matematika',                    lecturer: 'Dr. Mivan Ariful Fathoni, M.Si' },
-    { id: 'cl_adpl',       code: 'CL02', name: 'Analisis Dan Desain Perangkat Lunak',  lecturer: 'Muhammad Jauhar Fikri, S.Kom., M.Kom' },
-    { id: 'cl_mikrokontroller', code: 'CL03', name: 'Pemrograman Mikrokontroller',     lecturer: 'Guruh Putro Digantoro, S.Kom., M.Kom' },
-    { id: 'cl_mobile',     code: 'CL04', name: 'Pemrograman Berbasis Mobile',          lecturer: 'Zakki Alawi, S.Kom., MM' },
-    { id: 'cl_imk',        code: 'CL05', name: 'Interaksi Manusia & Komputer',         lecturer: 'Dwi Issadari Hastuti, S.Pd., S.Kom., M.Kom' },
-    { id: 'cl_iot',        code: 'CL06', name: 'Internet Of Things',                   lecturer: 'Mula Agung Barata, S.ST., M.Kom' },
-    { id: 'cl_komparsis',  code: 'CL07', name: 'Komputasi Paralel Dan Terdistribusi',  lecturer: 'Afnil Efan Pajri, S.Kom., M.I.Kom' },
+    { id: 'cl_logmat',          code: 'CL01', name: 'Logika Matematika',                   lecturerId: lecturer.id },
+    { id: 'cl_adpl',            code: 'CL02', name: 'Analisis Dan Desain Perangkat Lunak', lecturerId: lecturer.id },
+    { id: 'cl_mikrokontroller', code: 'CL03', name: 'Pemrograman Mikrokontroller',         lecturerId: lecturer.id },
+    { id: 'cl_mobile',          code: 'CL04', name: 'Pemrograman Berbasis Mobile',         lecturerId: lecturer.id },
+    { id: 'cl_imk',             code: 'CL05', name: 'Interaksi Manusia & Komputer',        lecturerId: lecturer.id },
+    { id: 'cl_iot',             code: 'CL06', name: 'Internet Of Things',                  lecturerId: lecturer.id },
+    { id: 'cl_komparsis',       code: 'CL07', name: 'Komputasi Paralel Dan Terdistribusi', lecturerId: lecturer.id },
   ];
 
   const courses = [];
   for (const c of coursesData) {
     const course = await prisma.course.upsert({
       where: { code: c.code },
-      update: { name: c.name, lecturer: c.lecturer },
+      update: { name: c.name, lecturerId: c.lecturerId },
       create: c,
     });
     courses.push(course);
   }
-  console.log(`✅ ${courses.length} Mata Kuliah Tersimpan`);
+  console.log(`✅ ${courses.length} Mata Kuliah Tersimpan (diajar oleh ${lecturer.name})`);
 
-  // 5. Enrollment — Mahasiswa mengambil semua MK
+  // 6. Enrollment — Mahasiswa mengambil semua MK
   await prisma.enrollment.deleteMany({ where: { studentId: student.id } });
   await prisma.enrollment.createMany({
     data: courses.map(c => ({
@@ -90,7 +109,7 @@ async function main() {
   });
   console.log(`✅ Enrollment: ${student.name} → ${courses.length} mata kuliah`);
 
-  // 6. Jadwal Pelajaran (sesuai mock_data.dart)
+  // 7. Jadwal Pelajaran (sesuai mock_data.dart)
   await prisma.schedule.deleteMany();
   await prisma.schedule.createMany({
     data: [
@@ -108,7 +127,7 @@ async function main() {
   });
   console.log(`✅ Jadwal Mingguan Tersimpan (7 slot)`);
 
-  // 7. Sample Attendance Records (Pertemuan 1-6 untuk semua MK)
+  // 8. Sample Attendance Records (Pertemuan 1-6 untuk semua MK)
   await prisma.attendance.deleteMany({ where: { studentId: student.id } });
   const attendanceData = [];
   for (const course of courses) {
@@ -125,20 +144,6 @@ async function main() {
   }
   await prisma.attendance.createMany({ data: attendanceData });
   console.log(`✅ Sample Attendance: ${attendanceData.length} records (6 pertemuan × 7 MK)`);
-
-  // 8. Sample Tasks
-  await prisma.task.deleteMany({ where: { studentId: student.id } });
-  await prisma.task.createMany({
-    data: [
-      { title: 'Membuat Aplikasi To-Do List',         description: 'Buat aplikasi To-Do List sederhana menggunakan Flutter.',         deadline: new Date('2026-04-15'), priority: 'high',   completed: false, studentId: student.id },
-      { title: 'Dokumen SRS',                         description: 'Membuat Software Requirements Specification untuk projek akhir.', deadline: new Date('2026-04-12'), priority: 'high',   completed: false, studentId: student.id },
-      { title: 'Rangkaian Sensor DHT11',               description: 'Merangkai dan memprogram sensor DHT11 dengan Arduino.',          deadline: new Date('2026-04-20'), priority: 'medium', completed: false, studentId: student.id },
-      { title: 'Implementasi MPI',                     description: 'Implementasikan program paralel sederhana menggunakan MPI.',     deadline: new Date('2026-04-18'), priority: 'medium', completed: false, studentId: student.id },
-      { title: 'Latihan Soal Logika Proposisi',         description: 'Kerjakan soal latihan bab logika proposisi dan predikat.',       deadline: new Date('2026-04-05'), priority: 'high',   completed: true,  studentId: student.id },
-      { title: 'Desain Wireframe Aplikasi',             description: 'Buat wireframe untuk aplikasi mobile menggunakan Figma.',        deadline: new Date('2026-04-06'), priority: 'low',    completed: true,  studentId: student.id },
-    ],
-  });
-  console.log(`✅ Sample Tasks: 6 tugas`);
 
   console.log('🌲 Seeding database selesai seluruhnya!');
 }

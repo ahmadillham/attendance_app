@@ -26,6 +26,7 @@ app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/leave-requests', require('./routes/leaveRoutes'));
 app.use('/api/profile', require('./routes/profileRoutes'));
 app.use('/api/face', require('./routes/faceRoutes'));
+app.use('/api/lecturer', require('./routes/lecturerRoutes'));
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'Absensi Backend API is running' });

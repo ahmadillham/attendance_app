@@ -53,6 +53,7 @@ class ApiService {
   );
 
   static const String _tokenKey = 'auth_token';
+  static const String _roleKey = 'user_role';
   static const Duration _defaultTimeout = Duration(seconds: 8);
   static const _secureStorage = FlutterSecureStorage();
 
@@ -75,8 +76,21 @@ class ApiService {
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
+    await prefs.remove(_roleKey);
     // NOTE: Saved credentials are NOT cleared here.
     // They persist so biometric login can re-authenticate.
+  }
+
+  // ─── Role Management ───────────────────────────────────────────
+
+  static Future<void> saveRole(String role) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_roleKey, role);
+  }
+
+  static Future<String> getRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_roleKey) ?? 'STUDENT';
   }
 
   // ─── Credential Storage (for biometric re-auth) ────────────────
@@ -93,16 +107,16 @@ class ApiService {
     return nim != null && nim.isNotEmpty;
   }
 
-  /// Re-authenticate using saved credentials. Returns true if a new token was obtained.
-  static Future<bool> loginWithSavedCredentials() async {
+  /// Re-authenticate using saved credentials. Returns the role if successful, null otherwise.
+  static Future<String?> loginWithSavedCredentials() async {
     final nim = await _secureStorage.read(key: 'saved_nim');
     final password = await _secureStorage.read(key: 'saved_password');
-    if (nim == null || password == null) return false;
+    if (nim == null || password == null) return null;
     try {
       return await login(nim, password);
     } catch (e) {
       debugPrint('Biometric re-auth failed: $e');
-      return false;
+      return null;
     }
   }
 
@@ -142,7 +156,8 @@ class ApiService {
 
   // ─── Authentication ──────────────────────────────────────────────
 
-  static Future<bool> login(String nim, String password) async {
+  /// Login and return the user role ('STUDENT' or 'LECTURER').
+  static Future<String> login(String nim, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/login'),
@@ -153,8 +168,10 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         await saveToken(data['token']);
+        final role = data['role'] ?? 'STUDENT';
+        await saveRole(role);
         await _saveCredentials(nim, password);
-        return true;
+        return role;
       } else {
         throw Exception('Kredensial tidak valid');
       }
@@ -418,6 +435,97 @@ class ApiService {
       );
     } catch (e) {
       return const ApiResult(success: false, message: 'Tidak dapat menghubungi server');
+    }
+  }
+
+  // ─── Lecturer API ──────────────────────────────────────────────
+
+  /// Get lecturer dashboard data (today's classes + stats)
+  static Future<Map<String, dynamic>> getLecturerDashboard() async {
+    return _get<Map<String, dynamic>>(
+      '/lecturer/dashboard',
+      parser: (json) => json as Map<String, dynamic>,
+    );
+  }
+
+  /// Get all courses taught by the lecturer
+  static Future<List<Map<String, dynamic>>> getLecturerCourses() async {
+    return _get<List<Map<String, dynamic>>>(
+      '/lecturer/courses',
+      parser: (json) => (json as List).cast<Map<String, dynamic>>(),
+    );
+  }
+
+  /// Get attendance recap for a specific course
+  static Future<Map<String, dynamic>> getCourseAttendance(String courseId) async {
+    return _get<Map<String, dynamic>>(
+      '/lecturer/courses/$courseId/attendance',
+      parser: (json) => json as Map<String, dynamic>,
+    );
+  }
+
+  /// Edit a student's attendance status
+  static Future<bool> editAttendanceStatus(String attendanceId, String newStatus) async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/lecturer/attendance/$attendanceId'),
+        headers: headers,
+        body: json.encode({'status': newStatus}),
+      ).timeout(_defaultTimeout);
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Get all leave requests from students in lecturer's courses
+  static Future<List<Map<String, dynamic>>> getLecturerLeaveRequests() async {
+    return _get<List<Map<String, dynamic>>>(
+      '/lecturer/leave-requests',
+      parser: (json) => (json as List).cast<Map<String, dynamic>>(),
+    );
+  }
+
+  /// Approve or reject a leave request
+  static Future<bool> reviewLeaveRequest(String id, String status, String? note) async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/lecturer/leave-requests/$id'),
+        headers: headers,
+        body: json.encode({'status': status, 'reviewNote': note}),
+      ).timeout(_defaultTimeout);
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Get lecturer profile
+  static Future<Map<String, dynamic>> getLecturerProfile() async {
+    return _get<Map<String, dynamic>>(
+      '/lecturer/profile',
+      parser: (json) => json as Map<String, dynamic>,
+    );
+  }
+
+  /// Change lecturer password
+  static Future<ApiResult> changeLecturerPassword(String oldPassword, String newPassword) async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/lecturer/profile/password'),
+        headers: headers,
+        body: json.encode({'oldPassword': oldPassword, 'newPassword': newPassword}),
+      ).timeout(_defaultTimeout);
+      final data = json.decode(response.body);
+      return ApiResult(
+        success: response.statusCode == 200,
+        message: data['message'] ?? 'Terjadi kesalahan',
+      );
+    } catch (e) {
+      return ApiResult(success: false, message: 'Server tidak dapat dihubungi: $e');
     }
   }
 }

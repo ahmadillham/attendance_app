@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'providers/app_provider.dart';
+import 'providers/lecturer_provider.dart';
 import 'constants/theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -13,6 +14,9 @@ import 'screens/history_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/face_register_screen.dart';
+import 'screens/lecturer/lecturer_dashboard_screen.dart';
+import 'screens/lecturer/manage_leave_screen.dart';
+import 'screens/lecturer/lecturer_profile_screen.dart';
 
 /// App Entry Point
 /// ─────────────────────────────────────────────
@@ -35,6 +39,7 @@ class AbsensiApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AppProvider()),
+        ChangeNotifierProvider(create: (_) => LecturerProvider()),
       ],
       child: MaterialApp(
         title: 'Absensi Kuliah',
@@ -65,6 +70,11 @@ class AbsensiApp extends StatelessWidget {
             case '/main':
               return MaterialPageRoute(
                 builder: (_) => const MainScreen(),
+                settings: settings,
+              );
+            case '/lecturer-main':
+              return MaterialPageRoute(
+                builder: (_) => const LecturerMainScreen(),
                 settings: settings,
               );
             case '/face-register':
@@ -189,6 +199,113 @@ class _MainScreenState extends State<MainScreen> {
                   child: Icon(Icons.access_time_filled, size: 22),
                 ),
                 label: 'Riwayat',
+              ),
+              BottomNavigationBarItem(
+                icon: Padding(
+                  padding: EdgeInsets.only(bottom: 2),
+                  child: Icon(Icons.person_outline, size: 22),
+                ),
+                activeIcon: Padding(
+                  padding: EdgeInsets.only(bottom: 2),
+                  child: Icon(Icons.person, size: 22),
+                ),
+                label: 'Profile',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lecturer Main Screen with Bottom Navigation
+class LecturerMainScreen extends StatefulWidget {
+  const LecturerMainScreen({super.key});
+
+  @override
+  State<LecturerMainScreen> createState() => _LecturerMainScreenState();
+}
+
+class _LecturerMainScreenState extends State<LecturerMainScreen> {
+  int _currentIndex = 0;
+
+  final List<Widget> _screens = const [
+    LecturerDashboardScreen(),
+    ManageLeaveScreen(),
+    LecturerProfileScreen(),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fetch lecturer profile for dashboard header
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<LecturerProvider>().fetchProfile();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              offset: const Offset(0, -4),
+              blurRadius: 16,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (index) => setState(() => _currentIndex = index),
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: AppColors.white,
+            selectedItemColor: AppColors.primary,
+            unselectedItemColor: AppColors.textMuted,
+            selectedFontSize: 11,
+            unselectedFontSize: 11,
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+            elevation: 0,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Padding(
+                  padding: EdgeInsets.only(bottom: 2),
+                  child: Icon(Icons.dashboard_outlined, size: 22),
+                ),
+                activeIcon: Padding(
+                  padding: EdgeInsets.only(bottom: 2),
+                  child: Icon(Icons.dashboard, size: 22),
+                ),
+                label: 'Beranda',
+              ),
+              BottomNavigationBarItem(
+                icon: Padding(
+                  padding: EdgeInsets.only(bottom: 2),
+                  child: Icon(Icons.assignment_outlined, size: 22),
+                ),
+                activeIcon: Padding(
+                  padding: EdgeInsets.only(bottom: 2),
+                  child: Icon(Icons.assignment, size: 22),
+                ),
+                label: 'Perizinan',
               ),
               BottomNavigationBarItem(
                 icon: Padding(

@@ -43,21 +43,40 @@ const loginUser = async (req, res) => {
         const { error } = loginValidation(req.body);
         if (error) return res.status(400).json({ message: error.details[0].message });
 
-        // Check user
-        const user = await prisma.student.findUnique({ where: { studentId: req.body.studentId } });
-        if (!user) return res.status(400).json({ message: 'Student ID not found' });
+        const loginId = req.body.studentId; // Could be NIM or NIP
+        let user = null;
+        let role = 'STUDENT';
+
+        // Try to find as Student first
+        user = await prisma.student.findUnique({ where: { studentId: loginId } });
+
+        // If not found, try as Lecturer (NIP)
+        if (!user) {
+            user = await prisma.lecturer.findUnique({ where: { lecturerId: loginId } });
+            role = 'LECTURER';
+        }
+
+        if (!user) return res.status(400).json({ message: 'ID tidak ditemukan' });
 
         // Password Check
         const validPass = await bcrypt.compare(req.body.password, user.password);
-        if (!validPass) return res.status(400).json({ message: 'Invalid password' });
+        if (!validPass) return res.status(400).json({ message: 'Password salah' });
 
-        // Create token
+        // Create token with role
         if (!process.env.TOKEN_SECRET) {
             return res.status(500).json({ message: 'Server misconfiguration: TOKEN_SECRET is not set' });
         }
-        const token = jwt.sign({ id: user.id }, process.env.TOKEN_SECRET, { expiresIn: '1d' });
-        
-        res.header('Authorization', `Bearer ${token}`).json({ token, studentId: user.studentId, name: user.name });
+        const token = jwt.sign({ id: user.id, role }, process.env.TOKEN_SECRET, { expiresIn: '1d' });
+
+        // Return unified response with role
+        const userId = role === 'STUDENT' ? user.studentId : user.lecturerId;
+        res.header('Authorization', `Bearer ${token}`).json({
+            token,
+            userId,
+            studentId: userId, // backward compat for frontend
+            name: user.name,
+            role,
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

@@ -133,12 +133,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
       // Re-authenticate with the backend using saved credentials
       setState(() => _isLoading = true);
-      final success = await ApiService.loginWithSavedCredentials();
+      final role = await ApiService.loginWithSavedCredentials();
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      if (success) {
-        Navigator.of(context).pushReplacementNamed('/main');
+      if (role != null) {
+        final route = role == 'LECTURER' ? '/lecturer-main' : '/main';
+        Navigator.of(context).pushReplacementNamed(route);
       } else {
         _showAlert(
           'Sesi Habis',
@@ -171,13 +172,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() => _isLoading = true);
 
     try {
-      final success = await ApiService.login(nim, password);
+      final role = await ApiService.login(nim, password);
       if (!mounted) return;
       setState(() => _isLoading = false);
-      
-      if (success) {
-        Navigator.of(context).pushReplacementNamed('/main');
-      }
+
+      final route = role == 'LECTURER' ? '/lecturer-main' : '/main';
+      Navigator.of(context).pushReplacementNamed(route);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);

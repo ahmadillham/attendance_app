@@ -55,17 +55,20 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     final token = await ApiService.getToken();
 
-    // Case 1: Valid, non-expired token → go to dashboard
+    // Case 1: Valid, non-expired token → route by saved role
     if (token != null && token.isNotEmpty && _isTokenValid(token)) {
-      Navigator.of(context).pushReplacementNamed('/main');
+      final role = await ApiService.getRole();
+      final route = role == 'LECTURER' ? '/lecturer-main' : '/main';
+      Navigator.of(context).pushReplacementNamed(route);
       return;
     }
 
     // Case 2: Token expired or missing — try re-auth with saved credentials
     if (await ApiService.hasSavedCredentials()) {
-      final success = await ApiService.loginWithSavedCredentials();
-      if (success && mounted) {
-        Navigator.of(context).pushReplacementNamed('/main');
+      final role = await ApiService.loginWithSavedCredentials();
+      if (role != null && mounted) {
+        final route = role == 'LECTURER' ? '/lecturer-main' : '/main';
+        Navigator.of(context).pushReplacementNamed(route);
         return;
       }
     }
