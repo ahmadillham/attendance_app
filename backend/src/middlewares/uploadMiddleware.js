@@ -15,7 +15,13 @@ const storage = multer.diskStorage({
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
+        const mimeToExt = {
+            'application/pdf': '.pdf',
+            'image/jpeg': '.jpg',
+            'image/png': '.png',
+            'image/jpg': '.jpg'
+        };
+        const ext = mimeToExt[file.mimetype] || '.bin';
         cb(null, file.fieldname + '-' + uniqueSuffix + ext);
     }
 });

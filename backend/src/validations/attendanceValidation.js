@@ -15,8 +15,7 @@ const leaveValidation = (data) => {
     const schema = Joi.object({
         reason: Joi.string().valid('sick', 'family', 'academic', 'emergency', 'other').required(),
         description: Joi.string().max(500).allow('', null),
-        dateFrom: Joi.date().iso().required(),
-        dateTo: Joi.date().iso().min(Joi.ref('dateFrom')).required(),
+        date: Joi.date().iso().required(),
     });
     return schema.validate(data);
 };

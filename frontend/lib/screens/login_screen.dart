@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
+import '../services/app_time.dart';
 
 /// LoginScreen — Modern Clean Design
 /// ─────────────────────────────────────────────
@@ -29,6 +30,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   bool _pwFocused = false;
   bool _biometricAvailable = false;
   String? _biometricType; // 'fingerprint' | 'face' | 'iris'
+
+  // Time Mocker trigger: 5 rapid background taps
+  int _bgTapCount = 0;
+  DateTime? _lastBgTap;
+  final GlobalKey _formCardKey = GlobalKey();
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -201,10 +207,247 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
+  /// Handle background taps for hidden Time Mocker trigger.
+  /// Only taps on the empty background count — not on the form card.
+  void _handleBackgroundTap(TapDownDetails details) {
+    // Check if tap landed inside the form card
+    final formBox = _formCardKey.currentContext?.findRenderObject() as RenderBox?;
+    if (formBox != null && formBox.hasSize) {
+      final formPos = formBox.localToGlobal(Offset.zero);
+      final formRect = formPos & formBox.size;
+      if (formRect.contains(details.globalPosition)) {
+        return; // Tap was on the form card — ignore
+      }
+    }
+
+    final now = DateTime.now(); // real system time for tap timing
+    if (_lastBgTap != null && now.difference(_lastBgTap!).inMilliseconds > 800) {
+      _bgTapCount = 0; // Reset if too slow
+    }
+    _lastBgTap = now;
+    _bgTapCount++;
+
+    if (_bgTapCount >= 5) {
+      _bgTapCount = 0;
+      _showTimeMockerModal();
+    }
+  }
+
+  /// Show the Time Mocker configuration modal.
+  void _showTimeMockerModal() {
+    DateTime mockDate = AppTime.isMocked ? AppTime.mockValue! : DateTime.now();
+    TimeOfDay mockTime = TimeOfDay(hour: mockDate.hour, minute: mockDate.minute);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(ctx).viewInsets.bottom + 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Sheet bar
+              Container(
+                width: 36, height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Row(
+                children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.science_outlined, size: 18, color: AppColors.danger),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Time Mocker',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (AppTime.isMocked)
+                    TextButton(
+                      onPressed: () {
+                        AppTime.clearMock();
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('⏱ Time mock cleared — using real system time'),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      },
+                      child: const Text('Reset', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                AppTime.isMocked
+                    ? 'Mock aktif: ${_fmtDt(AppTime.mockValue!)}'
+                    : 'Waktu sistem asli',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTime.isMocked ? AppColors.danger : AppColors.textMuted,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Date picker
+              GestureDetector(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: mockDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2030),
+                  );
+                  if (picked != null) {
+                    setSheetState(() => mockDate = DateTime(
+                      picked.year, picked.month, picked.day,
+                      mockTime.hour, mockTime.minute,
+                    ));
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Tanggal', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                          Text(
+                            '${mockDate.day.toString().padLeft(2, '0')}/${mockDate.month.toString().padLeft(2, '0')}/${mockDate.year}',
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Time picker
+              GestureDetector(
+                onTap: () async {
+                  final picked = await showTimePicker(
+                    context: ctx,
+                    initialTime: mockTime,
+                  );
+                  if (picked != null) {
+                    setSheetState(() {
+                      mockTime = picked;
+                      mockDate = DateTime(
+                        mockDate.year, mockDate.month, mockDate.day,
+                        picked.hour, picked.minute,
+                      );
+                    });
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.access_time, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Waktu', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                          Text(
+                            '${mockTime.hour.toString().padLeft(2, '0')}:${mockTime.minute.toString().padLeft(2, '0')}',
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Save button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.save, size: 18),
+                  label: const Text('Simpan Mock Time', style: TextStyle(fontWeight: FontWeight.w700)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.danger,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    final finalMock = DateTime(
+                      mockDate.year, mockDate.month, mockDate.day,
+                      mockTime.hour, mockTime.minute,
+                    );
+                    AppTime.setMock(finalMock);
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('🕐 Mock time set: ${_fmtDt(finalMock)}'),
+                        backgroundColor: AppColors.danger,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _fmtDt(DateTime dt) {
+    return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} '
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
+      onTapDown: _handleBackgroundTap,
+      behavior: HitTestBehavior.translucent,
       child: Scaffold(
         backgroundColor: AppColors.primary,
         body: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -300,6 +543,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         child: SlideTransition(
                           position: _slideAnim,
                           child: Container(
+                            key: _formCardKey,
                             padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
                               color: AppColors.surface,

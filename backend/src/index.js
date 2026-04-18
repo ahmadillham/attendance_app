@@ -17,7 +17,12 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('uploads', {
+    setHeaders: (res, path, stat) => {
+        res.set('Content-Disposition', 'attachment');
+        res.set('X-Content-Type-Options', 'nosniff');
+    }
+}));
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));

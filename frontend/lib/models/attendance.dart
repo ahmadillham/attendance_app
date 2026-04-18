@@ -1,3 +1,5 @@
+import '../services/app_time.dart';
+
 /// Single attendance record for one meeting
 class AttendanceRecord {
   final String date;
@@ -13,7 +15,7 @@ class AttendanceRecord {
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
     return AttendanceRecord(
       meeting: int.tryParse(json['meetingCount']?.toString() ?? '1') ?? 1,
-      date: json['date'] ?? json['timestamp'] ?? DateTime.now().toIso8601String(),
+      date: json['date'] ?? json['timestamp'] ?? AppTime.now().toIso8601String(),
       status: json['status'] ?? 'present',
     );
   }

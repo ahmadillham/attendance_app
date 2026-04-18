@@ -101,8 +101,7 @@ class _ManageLeaveScreenState extends State<ManageLeaveScreen> with SingleTicker
 
   Widget _buildLeaveCard(Map<String, dynamic> leave, bool showActions) {
     final student = leave['student'] as Map<String, dynamic>? ?? {};
-    final dateFrom = DateTime.tryParse(leave['dateFrom'] ?? '');
-    final dateTo = DateTime.tryParse(leave['dateTo'] ?? '');
+    final date = DateTime.tryParse(leave['date'] ?? '');
     final status = leave['status'] ?? 'PENDING';
     final reviewNote = leave['reviewNote'];
     final reviewedBy = leave['reviewedBy'] as Map<String, dynamic>?;
@@ -208,14 +207,14 @@ class _ManageLeaveScreenState extends State<ManageLeaveScreen> with SingleTicker
             ],
             const SizedBox(height: AppSpacing.sm),
 
-            // Date range
+            // Date
             Row(
               children: [
                 const Icon(Icons.calendar_today, size: 14, color: AppColors.textMuted),
                 const SizedBox(width: 4),
                 Text(
-                  dateFrom != null && dateTo != null
-                      ? '${DateFormat('dd MMM yyyy', 'id').format(dateFrom)} — ${DateFormat('dd MMM yyyy', 'id').format(dateTo)}'
+                  date != null
+                      ? DateFormat('dd MMM yyyy', 'id').format(date)
                       : '-',
                   style: const TextStyle(fontSize: AppFonts.caption, color: AppColors.textMuted),
                 ),

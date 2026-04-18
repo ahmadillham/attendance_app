@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/mock_data.dart';
+import 'app_time.dart';
 
 // ─── Typed Result Classes ────────────────────────────────────────
 
@@ -185,10 +187,13 @@ class ApiService {
 
   static Future<DashboardData> getDashboardData() async {
     try {
+      const dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+      final todayDay = dayNames[AppTime.now().weekday - 1];
+
       // Fetch both schedules and profile in parallel
       final results = await Future.wait([
         _get<List<ScheduleItem>>(
-          '/schedules',
+          '/schedules?dayOfWeek=$todayDay',
           parser: (json) => (json as List)
               .map((data) => ScheduleItem.fromJson(data))
               .toList(),
@@ -218,7 +223,7 @@ class ApiService {
 
   static List<ScheduleItem> _getMockSchedulesData() {
     const dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-    final todayDay = dayNames[DateTime.now().weekday - 1];
+    final todayDay = dayNames[AppTime.now().weekday - 1];
     return mockWeeklySchedule[todayDay] ?? [];
   }
 
@@ -267,7 +272,11 @@ class ApiService {
       request.fields['longitude'] = longitude.toString();
 
       if (imagePath != null) {
-        request.files.add(await http.MultipartFile.fromPath('faceImage', imagePath));
+        request.files.add(await http.MultipartFile.fromPath(
+          'faceImage', 
+          imagePath,
+          contentType: MediaType('image', 'jpeg'),
+        ));
       }
 
       final streamedResponse = await request.send().timeout(const Duration(seconds: 10));
@@ -314,8 +323,7 @@ class ApiService {
 
   static Future<bool> submitLeaveRequest({
     required String leaveType,
-    required String startDate,
-    required String endDate,
+    required String date,
     required String reason,
     PlatformFile? document,
   }) async {
@@ -325,15 +333,40 @@ class ApiService {
       if (token != null) request.headers['Authorization'] = 'Bearer $token';
 
       request.fields['reason'] = leaveType;
-      request.fields['dateFrom'] = startDate;
-      request.fields['dateTo'] = endDate;
+      request.fields['date'] = date;
       request.fields['description'] = reason;
 
       if (document != null) {
+        // Determine the correct MIME type from file extension,
+        // otherwise multer rejects it as "application/octet-stream".
+        MediaType? contentType;
+        final ext = document.extension?.toLowerCase() ?? document.name.split('.').last.toLowerCase();
+        switch (ext) {
+          case 'pdf':
+            contentType = MediaType('application', 'pdf');
+            break;
+          case 'jpg':
+          case 'jpeg':
+            contentType = MediaType('image', 'jpeg');
+            break;
+          case 'png':
+            contentType = MediaType('image', 'png');
+            break;
+        }
+
         if (document.path != null) {
-          request.files.add(await http.MultipartFile.fromPath('document', document.path!));
+          request.files.add(await http.MultipartFile.fromPath(
+            'document',
+            document.path!,
+            contentType: contentType,
+          ));
         } else if (document.bytes != null) {
-          request.files.add(http.MultipartFile.fromBytes('document', document.bytes!, filename: document.name));
+          request.files.add(http.MultipartFile.fromBytes(
+            'document',
+            document.bytes!,
+            filename: document.name,
+            contentType: contentType,
+          ));
         }
       }
 
@@ -407,7 +440,11 @@ class ApiService {
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/face/register'));
       if (token != null) request.headers['Authorization'] = 'Bearer $token';
 
-      request.files.add(await http.MultipartFile.fromPath('faceImage', imagePath));
+      request.files.add(await http.MultipartFile.fromPath(
+        'faceImage', 
+        imagePath,
+        contentType: MediaType('image', 'jpeg'),
+      ));
 
       final streamedResponse = await request.send().timeout(const Duration(seconds: 10));
       final response = await http.Response.fromStream(streamedResponse);

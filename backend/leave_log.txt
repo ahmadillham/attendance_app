@@ -1,0 +1,5 @@
+{"reason":"family","dateFrom":"2026-04-18T00:00:00.000","dateTo":"2026-04-18T00:00:00.000","description":"jsjaja"}
+{"reason":"sick","dateFrom":"2026-04-18T00:00:00.000","dateTo":"2026-04-18T00:00:00.000","description":"jajaja"}
+{"reason":"family","dateFrom":"2026-04-18T00:00:00.000","dateTo":"2026-04-18T00:00:00.000","description":"unini"}
+{"reason":"family","dateFrom":"2026-04-18T00:00:00.000","dateTo":"2026-04-18T00:00:00.000","description":"iwiaia"}
+{"reason":"sick","dateFrom":"2026-04-18T00:00:00.000","dateTo":"2026-04-18T00:00:00.000","description":"jj jbj"}

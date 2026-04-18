@@ -5,8 +5,7 @@ class LeaveRequest {
   final String? description;
   final String? evidenceUrl;
   final String status; // PENDING, APPROVED, REJECTED
-  final String dateFrom;
-  final String dateTo;
+  final String date;
   final String createdAt;
 
   const LeaveRequest({
@@ -15,8 +14,7 @@ class LeaveRequest {
     this.description,
     this.evidenceUrl,
     required this.status,
-    required this.dateFrom,
-    required this.dateTo,
+    required this.date,
     required this.createdAt,
   });
 
@@ -27,8 +25,7 @@ class LeaveRequest {
       description: json['description'],
       evidenceUrl: json['evidenceUrl'],
       status: json['status'] ?? 'PENDING',
-      dateFrom: json['dateFrom'] ?? '',
-      dateTo: json['dateTo'] ?? '',
+      date: json['date'] ?? '',
       createdAt: json['createdAt'] ?? '',
     );
   }

@@ -5,6 +5,7 @@ import '../constants/theme.dart';
 import '../widgets/screen_header.dart';
 import '../widgets/section_label.dart';
 import '../services/api_service.dart';
+import '../services/app_time.dart';
 
 /// LeaveRequestScreen — Modern Clean Design
 /// ─────────────────────────────────────────────
@@ -40,8 +41,7 @@ class LeaveRequestScreen extends StatefulWidget {
 }
 
 class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
-  DateTime _startDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-  DateTime _endDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+  DateTime _selectedDate = DateTime(AppTime.now().year, AppTime.now().month, AppTime.now().day);
   String? _reason;
   final _descriptionController = TextEditingController();
   PlatformFile? _document;
@@ -95,8 +95,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
     try {
       reqSuccess = await ApiService.submitLeaveRequest(
         leaveType: _reason!,
-        startDate: _startDate.toIso8601String(),
-        endDate: _endDate.toIso8601String(),
+        date: _selectedDate.toIso8601String(),
         reason: _descriptionController.text.trim(),
         document: _document,
       );
@@ -111,7 +110,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
       final reasonLabel = _leaveReasons.firstWhere((r) => r.value == _reason).label;
       _showAlert(
         '✅ Berhasil',
-        'Perizinan $reasonLabel telah dikirim.\n\n${_formatDate(_startDate)} — ${_formatDate(_endDate)}\n\nTunggu konfirmasi dari dosen.',
+        'Perizinan $reasonLabel telah dikirim.\n\nTanggal: ${_formatDate(_selectedDate)}\n\nTunggu konfirmasi dari dosen.',
         onDismiss: () => Navigator.of(context).pop(),
       );
     } else {
@@ -226,11 +225,10 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
     );
   }
 
-  void _showDatePickerSheet(String type) {
-    final date = type == 'start' ? _startDate : _endDate;
-    int tempYear = date.year;
-    int tempMonth = date.month;
-    int tempDay = date.day;
+  void _showDatePickerSheet() {
+    int tempYear = _selectedDate.year;
+    int tempMonth = _selectedDate.month;
+    int tempDay = _selectedDate.day;
 
     const monthNames = [
       '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -264,11 +262,11 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              Align(
+              const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  type == 'start' ? 'Tanggal Mulai' : 'Tanggal Selesai',
-                  style: const TextStyle(
+                  'Tanggal Izin',
+                  style: TextStyle(
                     fontSize: AppFonts.h3,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -331,20 +329,8 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    final newDate = DateTime(tempYear, tempMonth, tempDay);
                     setState(() {
-                      if (type == 'start') {
-                        _startDate = newDate;
-                        if (newDate.isAfter(_endDate)) _endDate = newDate;
-                      } else {
-                        if (newDate.isBefore(_startDate)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Tanggal selesai tidak boleh sebelum tanggal mulai.')),
-                          );
-                          return;
-                        }
-                        _endDate = newDate;
-                      }
+                      _selectedDate = DateTime(tempYear, tempMonth, tempDay);
                     });
                     Navigator.pop(ctx);
                   },
@@ -402,95 +388,46 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Date Range ─────────────────
+                    // ── Date Selection ─────────────────
                     const SectionLabel('TANGGAL IZIN'),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => _showDatePickerSheet('start'),
-                            child: Container(
-                              padding: const EdgeInsets.all(14),
+                    GestureDetector(
+                      onTap: _showDatePickerSheet,
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          boxShadow: AppShadows.card,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
                               decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(AppRadius.md),
-                                boxShadow: AppShadows.card,
+                                color: AppColors.primarySurface,
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Row(
+                              child: const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    width: 36,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primarySurface,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text('Mulai', style: TextStyle(fontSize: AppFonts.small, color: AppColors.textMuted)),
-                                        const SizedBox(height: 1),
-                                        Text(
-                                          _formatDate(_startDate),
-                                          style: const TextStyle(fontSize: AppFonts.caption, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                                        ),
-                                      ],
-                                    ),
+                                  const Text('Tanggal', style: TextStyle(fontSize: AppFonts.small, color: AppColors.textMuted)),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    _formatDate(_selectedDate),
+                                    style: const TextStyle(fontSize: AppFonts.caption, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                                   ),
                                 ],
                               ),
                             ),
-                          ),
+                            const Icon(Icons.chevron_right, size: 20, color: AppColors.textMuted),
+                          ],
                         ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Icon(Icons.arrow_forward, size: 16, color: AppColors.textMuted),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => _showDatePickerSheet('end'),
-                            child: Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(AppRadius.md),
-                                boxShadow: AppShadows.card,
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 36,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primarySurface,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text('Selesai', style: TextStyle(fontSize: AppFonts.small, color: AppColors.textMuted)),
-                                        const SizedBox(height: 1),
-                                        Text(
-                                          _formatDate(_endDate),
-                                          style: const TextStyle(fontSize: AppFonts.caption, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
 
                     // ── Reason Picker ─────────────────

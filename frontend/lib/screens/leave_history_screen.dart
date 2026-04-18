@@ -159,7 +159,7 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
                             const Icon(Icons.calendar_today, size: 14, color: AppColors.textSecondary),
                             const SizedBox(width: 4),
                             Text(
-                              '${_formatDate(leave.dateFrom)} s/d ${_formatDate(leave.dateTo)}',
+                              _formatDate(leave.date),
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: AppColors.textSecondary,

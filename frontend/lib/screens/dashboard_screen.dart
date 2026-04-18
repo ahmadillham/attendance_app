@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../constants/theme.dart';
 import '../constants/mock_data.dart';
 import '../providers/app_provider.dart';
+import '../services/app_time.dart';
 
 /// DashboardScreen — Modern Clean Design
 /// ─────────────────────────────────────────────
@@ -54,10 +55,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final stats = student.attendanceSummary;
           final attendancePercent = stats.percentage;
           const dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-          final todayDay = dayNames[DateTime.now().weekday - 1];
+          final todayDay = dayNames[AppTime.now().weekday - 1];
 
           // Dynamic greeting based on time of day
-          final hour = DateTime.now().hour;
+          final hour = AppTime.now().hour;
           String greeting;
           if (hour < 11) {
             greeting = 'SELAMAT PAGI';
@@ -185,135 +186,266 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // ── Quick Actions ──────────────────
-                    // Absensi Button
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                        boxShadow: AppShadows.glow,
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => Navigator.of(context).pushNamed('/attendance'),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primarySurface,
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: const Icon(Icons.face, size: 22, color: AppColors.primary),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Absensi',
-                                        style: TextStyle(
-                                          fontSize: AppFonts.body,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.white,
-                                        ),
+                    // Compute attendance time-window eligibility
+                    // Window: 12 hours before class start → 15 minutes after class start
+                    Builder(builder: (context) {
+                      final now = AppTime.timeOfDay();
+                      final nowMinutes = now.hour * 60 + now.minute;
+                      const earlyOpenMinutes = 12 * 60; // 12 hours
+                      const lateCloseMinutes = 15;
+
+                      // Check if any class is within its attendance window
+                      bool isWindowOpen = false;
+                      String? windowCloseInfo; // when the current open window closes
+                      String? nextWindowInfo; // when the next window opens
+
+                      final todaySchedules = provider.dashboardData!.todaySchedules;
+                      for (final item in todaySchedules) {
+                        // time format: "09:45 – 11:00"
+                        final startStr = item.time.split(' – ').first.trim();
+                        final parts = startStr.split(':');
+                        if (parts.length == 2) {
+                          final startMinutes = int.parse(parts[0]) * 60 + int.parse(parts[1]);
+                          final diff = nowMinutes - startMinutes;
+                          // Allow: from earlyOpenMinutes before to lateCloseMinutes after
+                          if (diff >= -earlyOpenMinutes && diff <= lateCloseMinutes) {
+                            isWindowOpen = true;
+                            final closeMin = startMinutes + lateCloseMinutes;
+                            final h = closeMin ~/ 60;
+                            final m = closeMin % 60;
+                            windowCloseInfo = '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+                            break;
+                          }
+                        }
+                      }
+
+                      // Find next upcoming window for display
+                      if (!isWindowOpen && todaySchedules.isNotEmpty) {
+                        int? nearestClose;
+                        for (final item in todaySchedules) {
+                          final startStr = item.time.split(' – ').first.trim();
+                          final parts = startStr.split(':');
+                          if (parts.length == 2) {
+                            final startMinutes = int.parse(parts[0]) * 60 + int.parse(parts[1]);
+                            final closeMinutes = startMinutes + lateCloseMinutes;
+                            // Only future windows (haven't closed yet)
+                            if (closeMinutes > nowMinutes) {
+                              nearestClose ??= closeMinutes;
+                              if (closeMinutes < nearestClose) nearestClose = closeMinutes;
+                            }
+                          }
+                        }
+                        if (nearestClose != null) {
+                          // The window will open earlyOpenMinutes before class start
+                          // but since earlyOpen is 12h, it's likely already open or will be "soon"
+                          // Show the class start time as reference
+                          final classStart = nearestClose - lateCloseMinutes;
+                          final h = classStart ~/ 60;
+                          final m = classStart % 60;
+                          nextWindowInfo = '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+                        }
+                      }
+
+                      final bool canAttend = isWindowOpen;
+
+                      return Opacity(
+                        opacity: canAttend ? 1.0 : 0.5,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            boxShadow: canAttend ? AppShadows.glow : null,
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: canAttend ? () => Navigator.of(context).pushNamed('/attendance') : null,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primarySurface,
+                                        borderRadius: BorderRadius.circular(14),
                                       ),
-                                      Text(
-                                        'Wajah & Lokasi',
-                                        style: TextStyle(
-                                          fontSize: AppFonts.small,
-                                          color: Colors.white.withValues(alpha: 0.9),
-                                        ),
+                                      child: Icon(
+                                        canAttend ? Icons.face : Icons.lock_clock,
+                                        size: 22,
+                                        color: AppColors.primary,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Absensi',
+                                            style: TextStyle(
+                                              fontSize: AppFonts.body,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.white,
+                                            ),
+                                          ),
+                                          Text(
+                                            canAttend
+                                                ? windowCloseInfo != null
+                                                    ? 'Batas absen sampai $windowCloseInfo'
+                                                    : 'Wajah & Lokasi'
+                                                : nextWindowInfo != null
+                                                    ? 'Kelas berikutnya pukul $nextWindowInfo'
+                                                    : todaySchedules.isEmpty
+                                                        ? 'Tidak ada kelas hari ini'
+                                                        : 'Semua jendela absensi telah ditutup',
+                                            style: TextStyle(
+                                              fontSize: AppFonts.small,
+                                              color: Colors.white.withValues(alpha: 0.9),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.18),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        canAttend ? Icons.chevron_right : Icons.lock_outline,
+                                        size: 18,
+                                        color: AppColors.white,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.18),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(Icons.chevron_right, size: 18, color: AppColors.white),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
                     const SizedBox(height: 10),
 
                     // Ajukan Izin Button
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                        border: Border.all(color: AppColors.border),
-                        boxShadow: AppShadows.card,
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => Navigator.of(context).pushNamed('/leave-request'),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.warningSurface,
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: const Icon(Icons.description_outlined, size: 22, color: AppColors.warning),
-                                ),
-                                const SizedBox(width: 14),
-                                const Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Ajukan Izin',
-                                        style: TextStyle(
-                                          fontSize: AppFonts.body,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.textPrimary,
-                                        ),
+                    Builder(builder: (context) {
+                      final todaySchedules = provider.dashboardData!.todaySchedules;
+                      final hasClassesToday = todaySchedules.isNotEmpty;
+
+                      // Check if at least one class hasn't started yet (cutoff = class start time)
+                      bool hasUpcomingClass = false;
+                      String? nextClassTime;
+                      if (hasClassesToday) {
+                        final now = AppTime.timeOfDay();
+                        final nowMinutes = now.hour * 60 + now.minute;
+                        for (final item in todaySchedules) {
+                          final startStr = item.time.split(' – ').first.trim();
+                          final parts = startStr.split(':');
+                          if (parts.length == 2) {
+                            final startMinutes = int.parse(parts[0]) * 60 + int.parse(parts[1]);
+                            if (startMinutes > nowMinutes) {
+                              hasUpcomingClass = true;
+                              nextClassTime ??= startStr;
+                              break;
+                            }
+                          }
+                        }
+                      }
+
+                      final bool canRequestLeave = hasClassesToday && hasUpcomingClass;
+
+                      // Subtitle text
+                      String subtitle;
+                      if (!hasClassesToday) {
+                        subtitle = 'Tidak ada kelas hari ini';
+                      } else if (!hasUpcomingClass) {
+                        subtitle = 'Batas waktu izin telah lewat';
+                      } else {
+                        subtitle = 'Batas sebelum pukul $nextClassTime';
+                      }
+
+                      return Opacity(
+                        opacity: canRequestLeave ? 1.0 : 0.5,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            border: Border.all(color: AppColors.border),
+                            boxShadow: canRequestLeave ? AppShadows.card : null,
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: canRequestLeave
+                                  ? () => Navigator.of(context).pushNamed('/leave-request')
+                                  : null,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: canRequestLeave ? AppColors.warningSurface : AppColors.borderLight,
+                                        borderRadius: BorderRadius.circular(14),
                                       ),
-                                      Text(
-                                        'Perizinan & Sakit',
-                                        style: TextStyle(
-                                          fontSize: AppFonts.small,
-                                          color: AppColors.textMuted,
-                                        ),
+                                      child: Icon(
+                                        canRequestLeave ? Icons.description_outlined : Icons.block,
+                                        size: 22,
+                                        color: canRequestLeave ? AppColors.warning : AppColors.textMuted,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Ajukan Izin',
+                                            style: TextStyle(
+                                              fontSize: AppFonts.body,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.textPrimary,
+                                            ),
+                                          ),
+                                          Text(
+                                            subtitle,
+                                            style: const TextStyle(
+                                              fontSize: AppFonts.small,
+                                              color: AppColors.textMuted,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.border,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        canRequestLeave ? Icons.chevron_right : Icons.lock_outline,
+                                        size: 18,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.border,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(Icons.chevron_right, size: 18, color: AppColors.textSecondary),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
 
                     const SizedBox(height: 20),
 
@@ -438,7 +570,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(DateTime.now()),
+                              DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(AppTime.now()),
                               style: const TextStyle(
                                 fontSize: AppFonts.caption,
                                 color: AppColors.textMuted,

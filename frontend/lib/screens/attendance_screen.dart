@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../constants/theme.dart';
 import '../constants/mock_data.dart';
 import '../services/api_service.dart';
+import '../services/app_time.dart';
 import '../providers/app_provider.dart';
 
 /// AttendanceScreen — Modern Clean Design
@@ -141,14 +142,65 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<AppProvider>();
       final todaySchedules = provider.dashboardData?.todaySchedules ?? [];
+
+      // Find the class currently within its attendance window
+      // Window: 12 hours before class start → 15 minutes after class start
+      final now = AppTime.timeOfDay();
+      final nowMinutes = now.hour * 60 + now.minute;
+      const earlyOpenMinutes = 12 * 60; // 12 hours
+      const lateCloseMinutes = 15;
+
+      for (final item in todaySchedules) {
+        final startStr = item.time.split(' – ').first.trim();
+        final parts = startStr.split(':');
+        if (parts.length == 2) {
+          final startMinutes = int.parse(parts[0]) * 60 + int.parse(parts[1]);
+          final diff = nowMinutes - startMinutes;
+          if (diff >= -earlyOpenMinutes && diff <= lateCloseMinutes) {
+            setState(() => _activeSchedule = item);
+            return;
+          }
+        }
+      }
+
+      // Fallback: no class in window; still set first if available (UI shows disabled)
       if (todaySchedules.isNotEmpty) {
-        // Pick the first schedule item (most likely the current/active class)
         setState(() => _activeSchedule = todaySchedules.first);
       }
     });
   }
 
+  /// Check if the active schedule is within the attendance window right now.
+  /// Window: 12 hours before class start → 15 minutes after class start.
+  bool _isWithinAttendanceWindow() {
+    if (_activeSchedule == null) return false;
+    final now = AppTime.timeOfDay();
+    final nowMinutes = now.hour * 60 + now.minute;
+    const earlyOpenMinutes = 12 * 60; // 12 hours
+    const lateCloseMinutes = 15;
+
+    final startStr = _activeSchedule!.time.split(' – ').first.trim();
+    final parts = startStr.split(':');
+    if (parts.length != 2) return false;
+
+    final startMinutes = int.parse(parts[0]) * 60 + int.parse(parts[1]);
+    final diff = nowMinutes - startMinutes;
+    return diff >= -earlyOpenMinutes && diff <= lateCloseMinutes;
+  }
+
   Future<void> _handleCapture() async {
+    // Verify time window before proceeding
+    if (!_isWithinAttendanceWindow()) {
+      setState(() {
+        _result = {
+          'success': false,
+          'message': 'Absensi hanya dapat dilakukan dalam 15 menit pertama setelah kelas dimulai.',
+        };
+        _showResult = true;
+      });
+      return;
+    }
+
     // Start scanning animation
     setState(() => _isScanning = true);
     _scanAnimController.repeat(reverse: true);
@@ -370,58 +422,68 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                         const SizedBox(height: 14),
 
                         // Capture button
-                        AnimatedBuilder(
-                          animation: _pulseAnim,
-                          builder: (_, child) => Transform.scale(
-                            scale: _isScanning ? 1.0 : _pulseAnim.value,
-                            child: child,
-                          ),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(AppRadius.md),
-                                boxShadow: AppShadows.glow,
-                              ),
-                              child: ElevatedButton(
-                                onPressed: _isScanning ? null : _handleCapture,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.7),
-                                  foregroundColor: AppColors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
-                                  ),
-                                  elevation: 0,
+                        Builder(builder: (context) {
+                          final windowOpen = _isWithinAttendanceWindow();
+                          final bool buttonEnabled = windowOpen && !_isScanning;
+
+                          return AnimatedBuilder(
+                            animation: _pulseAnim,
+                            builder: (_, child) => Transform.scale(
+                              scale: _isScanning || !windowOpen ? 1.0 : _pulseAnim.value,
+                              child: child,
+                            ),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  boxShadow: windowOpen ? AppShadows.glow : null,
                                 ),
-                                child: _isScanning
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: AppColors.white,
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.face, size: 22),
-                                          SizedBox(width: 10),
-                                          Text(
-                                            'Verifikasi Sekarang',
-                                            style: TextStyle(
-                                              fontSize: AppFonts.body,
-                                              fontWeight: FontWeight.w700,
-                                            ),
+                                child: ElevatedButton(
+                                  onPressed: buttonEnabled ? _handleCapture : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: windowOpen ? AppColors.primary : Colors.grey.shade600,
+                                    disabledBackgroundColor: windowOpen
+                                        ? AppColors.primary.withValues(alpha: 0.7)
+                                        : Colors.grey.shade700,
+                                    foregroundColor: AppColors.white,
+                                    disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(AppRadius.md),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: _isScanning
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            color: AppColors.white,
+                                            strokeWidth: 2,
                                           ),
-                                        ],
-                                      ),
+                                        )
+                                      : Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(windowOpen ? Icons.face : Icons.lock_clock, size: 22),
+                                            const SizedBox(width: 10),
+                                            Text(
+                                              windowOpen
+                                                  ? 'Verifikasi Sekarang'
+                                                  : 'Di Luar Waktu Absensi',
+                                              style: const TextStyle(
+                                                fontSize: AppFonts.body,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
+                          );
+                        }),
                       ],
                     ),
                   ),

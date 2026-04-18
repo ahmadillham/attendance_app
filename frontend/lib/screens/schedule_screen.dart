@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../constants/theme.dart';
 import '../constants/mock_data.dart';
 import '../services/api_service.dart';
+import '../services/app_time.dart';
 
 /// ScheduleScreen — Weekly schedule with day tabs
 const _days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -24,7 +25,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   void initState() {
     super.initState();
-    final today = DateTime.now().weekday; // 1=Mon ... 7=Sun
+    final today = AppTime.now().weekday; // 1=Mon ... 7=Sun
     if (today == 7) {
       _selectedDay = 0; // Sunday → show Monday
     } else if (today == 6) {

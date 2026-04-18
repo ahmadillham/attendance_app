@@ -70,18 +70,17 @@ async function extractDescriptor(imagePath) {
         return null;
     }
 
+    let tensor;
     try {
-        // Load image using node-canvas
-        const img = await canvas.loadImage(imagePath);
+        // Read file bytes
+        const buffer = fs.readFileSync(imagePath);
         
-        // Create a canvas and draw the image
-        const cvs = canvas.createCanvas(img.width, img.height);
-        const ctx = cvs.getContext('2d');
-        ctx.drawImage(img, 0, 0);
+        // Decode image directly to a 3D tensor (bypasses node-canvas native crash issues)
+        tensor = tf.node.decodeImage(buffer, 3);
 
         // Detect single face → landmarks → descriptor
         const detection = await faceapi
-            .detectSingleFace(cvs)
+            .detectSingleFace(tensor)
             .withFaceLandmarks()
             .withFaceDescriptor();
 
@@ -95,6 +94,10 @@ async function extractDescriptor(imagePath) {
     } catch (err) {
         console.error(`❌ Face descriptor extraction failed: ${err.message}`);
         return null;
+    } finally {
+        if (tensor) {
+            tensor.dispose();
+        }
     }
 }
 

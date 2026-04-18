@@ -43,7 +43,29 @@ const getProfile = async (req, res) => {
             summary[a.status] = a._count.status;
             summary.total += a._count.status;
         });
-        // Fallback: if no attendance at all, avoid division by zero
+
+        // Include leave request outcomes in the summary:
+        // APPROVED → counts as "leave" (izin)
+        // REJECTED → counts as "absent" (absen)
+        const leaveOutcomes = await prisma.leaveRequest.groupBy({
+            by: ['status'],
+            where: {
+                studentId,
+                status: { in: ['APPROVED', 'REJECTED'] },
+            },
+            _count: { status: true },
+        });
+        leaveOutcomes.forEach(lr => {
+            if (lr.status === 'APPROVED') {
+                summary.leave += lr._count.status;
+                summary.total += lr._count.status;
+            } else if (lr.status === 'REJECTED') {
+                summary.absent += lr._count.status;
+                summary.total += lr._count.status;
+            }
+        });
+
+        // Fallback: if no records at all, avoid division by zero
         if (summary.total === 0) summary.total = 1;
 
         res.json({

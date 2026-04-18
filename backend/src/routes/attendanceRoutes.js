@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
 const authMiddleware = require('../middlewares/authMiddleware');
+const studentMiddleware = require('../middlewares/studentMiddleware');
 const upload = require('../middlewares/uploadMiddleware');
 const { verifyFace } = require('../lib/faceVerify');
 const { extractDescriptor, isAvailable: isFaceModelAvailable } = require('../lib/faceDescriptor');
@@ -22,7 +23,7 @@ const CAMPUS_LNG = 111.892951;
 const ALLOWED_RADIUS = 200;
 
 // POST /api/attendance
-router.post('/', authMiddleware, upload.single('faceImage'), async (req, res) => {
+router.post('/', authMiddleware, studentMiddleware, upload.single('faceImage'), async (req, res) => {
     try {
         // Validate input fields (multer already parsed multipart, so req.body has strings)
         const validationData = {
@@ -45,6 +46,40 @@ router.post('/', authMiddleware, upload.single('faceImage'), async (req, res) =>
         });
         if (!enrollment) {
             return res.status(403).json({ message: 'Akses ditolak: Anda tidak terdaftar di mata kuliah ini.' });
+        }
+
+        // Security 5: Time-window validation
+        // Window opens 12 hours before class start, closes 15 minutes after class start
+        const EARLY_OPEN_MINUTES = 12 * 60; // 12 hours = 720 minutes
+        const LATE_CLOSE_MINUTES = 15;
+        const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const todayDay = dayNames[new Date().getDay()];
+
+        const schedule = await prisma.schedule.findFirst({
+            where: { courseId, dayOfWeek: todayDay },
+        });
+        if (!schedule) {
+            return res.status(403).json({
+                message: 'Tidak ada jadwal untuk mata kuliah ini hari ini.',
+            });
+        }
+
+        // Parse schedule startTime (format "HH:mm") and compare with current time
+        const [startHour, startMin] = schedule.startTime.split(':').map(Number);
+        const now = new Date();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const classStartMinutes = startHour * 60 + startMin;
+        const diffMinutes = nowMinutes - classStartMinutes;
+
+        // diffMinutes < 0 means we're before class start, diffMinutes > 0 means after
+        // Allow: from 720 min before (diffMinutes >= -720) to 15 min after (diffMinutes <= 15)
+        if (diffMinutes < -EARLY_OPEN_MINUTES || diffMinutes > LATE_CLOSE_MINUTES) {
+            const windowStartMin = classStartMinutes - EARLY_OPEN_MINUTES;
+            const windowEndMin = classStartMinutes + LATE_CLOSE_MINUTES;
+            const fmtTime = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+            return res.status(403).json({
+                message: `Absensi hanya dapat dilakukan antara ${fmtTime(Math.max(0, windowStartMin))} – ${fmtTime(windowEndMin)}.`,
+            });
         }
 
         // Auto-calculate meeting count if not provided
@@ -110,22 +145,29 @@ router.post('/', authMiddleware, upload.single('faceImage'), async (req, res) =>
 
 
 
-        const attendance = await prisma.attendance.create({
-            data: {
-                status,
-                meetingCount,
-                studentId,
-                courseId
+        try {
+            const attendance = await prisma.attendance.create({
+                data: {
+                    status,
+                    meetingCount,
+                    studentId,
+                    courseId
+                }
+            });
+            res.status(201).json(attendance);
+        } catch (createErr) {
+            if (createErr.code === 'P2002') {
+                return res.status(409).json({ message: `Konflik: Absensi pertemuan ke-${meetingCount} untuk mata kuliah ini sudah tercatat (mencegah duplikasi simultan).` });
             }
-        });
-        res.status(201).json(attendance);
+            throw createErr;
+        }
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
 // GET /api/attendance/history
-router.get('/history', authMiddleware, async (req, res) => {
+router.get('/history', authMiddleware, studentMiddleware, async (req, res) => {
     try {
         const studentId = req.user.id;
         const history = await prisma.attendance.findMany({

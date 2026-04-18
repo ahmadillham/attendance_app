@@ -119,8 +119,7 @@ model LeaveRequest {
   description    String?        @db.Text
   evidenceUrl    String?        
   status         LeaveStatus    @default(PENDING)
-  dateFrom       DateTime       
-  dateTo         DateTime
+  date           DateTime       
   studentId      String
   student        Student        @relation(fields: [studentId], references: [id])
   reviewedById   String?

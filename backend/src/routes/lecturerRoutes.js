@@ -216,9 +216,29 @@ router.put('/leave-requests/:id', async (req, res) => {
             return res.status(400).json({ message: 'Status harus APPROVED atau REJECTED' });
         }
 
-        // Verify the leave request exists
-        const existing = await prisma.leaveRequest.findUnique({ where: { id: req.params.id } });
+        // Verify the leave request exists and fetch student enrollments
+        const existing = await prisma.leaveRequest.findUnique({ 
+            where: { id: req.params.id },
+            include: {
+                student: {
+                    include: {
+                        enrollments: {
+                            include: { course: true }
+                        }
+                    }
+                }
+            }
+        });
         if (!existing) return res.status(404).json({ message: 'Pengajuan izin tidak ditemukan' });
+
+        // IDOR Fix: Verify that the student is enrolled in at least one of this lecturer's courses
+        const isAuthorized = existing.student.enrollments.some(
+            (enrollment) => enrollment.course.lecturerId === req.user.id
+        );
+
+        if (!isAuthorized) {
+            return res.status(403).json({ message: 'Akses ditolak: Mahasiswa tidak mengambil mata kuliah Anda.' });
+        }
 
         const updated = await prisma.leaveRequest.update({
             where: { id: req.params.id },
