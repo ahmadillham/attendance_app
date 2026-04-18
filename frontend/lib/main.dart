@@ -44,16 +44,7 @@ class AbsensiApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Absensi Kuliah',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: AppColors.primary,
-            primary: AppColors.primary,
-            surface: AppColors.surface,
-          ),
-          scaffoldBackgroundColor: AppColors.background,
-          fontFamily: 'Roboto',
-          useMaterial3: true,
-        ),
+        theme: AppTheme.lightTheme,
         initialRoute: '/splash',
         onGenerateRoute: (settings) {
           switch (settings.name) {
@@ -163,8 +154,8 @@ class _MainScreenState extends State<MainScreen> {
             unselectedItemColor: AppColors.textMuted,
             selectedFontSize: 11,
             unselectedFontSize: 11,
-            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400),
             elevation: 0,
             items: const [
               BottomNavigationBarItem(
@@ -281,8 +272,8 @@ class _LecturerMainScreenState extends State<LecturerMainScreen> {
             unselectedItemColor: AppColors.textMuted,
             selectedFontSize: 11,
             unselectedFontSize: 11,
-            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400),
             elevation: 0,
             items: const [
               BottomNavigationBarItem(

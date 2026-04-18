@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import '../../constants/theme.dart';
 import '../../providers/lecturer_provider.dart';
+import '../../services/app_time.dart';
+import '../../widgets/dashboard_header.dart';
 
 /// Lecturer Dashboard — shows today's classes, quick stats, pending leaves
 class LecturerDashboardScreen extends StatefulWidget {
@@ -24,113 +27,85 @@ class _LecturerDashboardScreenState extends State<LecturerDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Consumer<LecturerProvider>(
-          builder: (context, provider, _) {
-            if (provider.isDashboardLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (provider.dashboardError != null) {
-              return _buildError(provider.dashboardError!);
-            }
-            final data = provider.dashboardData;
-            if (data == null) return const SizedBox.shrink();
+      body: Consumer<LecturerProvider>(
+        builder: (context, provider, _) {
+          if (provider.isDashboardLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (provider.dashboardError != null) {
+            return _buildError(provider.dashboardError!);
+          }
+          final data = provider.dashboardData;
+          if (data == null) return const SizedBox.shrink();
 
-            final today = data['today'] ?? '';
-            final todayCourses = data['todayCourses'] as List? ?? [];
-            final totalCourses = data['totalCourses'] ?? 0;
-            final totalStudents = data['totalStudents'] ?? 0;
-            final pendingLeaves = data['pendingLeaveCount'] ?? 0;
+          final today = data['today'] ?? '';
+          final todayCourses = data['todayCourses'] as List? ?? [];
+          final totalCourses = data['totalCourses'] ?? 0;
+          final totalStudents = data['totalStudents'] ?? 0;
+          final pendingLeaves = data['pendingLeaveCount'] ?? 0;
 
-            return RefreshIndicator(
-              onRefresh: () => provider.fetchDashboard(),
-              child: ListView(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                children: [
-                  // Header
-                  _buildHeader(provider),
-                  const SizedBox(height: AppSpacing.lg),
+          final profile = provider.profile;
+          final name = profile?.name ?? 'Dosen';
+          final nip = profile?.lecturerId ?? '-';
+          final faculty = profile?.faculty ?? '-';
 
-                  // Stats Row
-                  _buildStatsRow(totalCourses, totalStudents, pendingLeaves),
-                  const SizedBox(height: AppSpacing.lg),
+          final hour = AppTime.now().hour;
+          String greeting;
+          if (hour < 11) {
+            greeting = 'SELAMAT PAGI';
+          } else if (hour < 15) {
+            greeting = 'SELAMAT SIANG';
+          } else if (hour < 18) {
+            greeting = 'SELAMAT SORE';
+          } else {
+            greeting = 'SELAMAT MALAM';
+          }
 
-                  // Today's Classes
-                  Text(
-                    'Kelas Hari Ini — $today',
-                    style: const TextStyle(
-                      fontSize: AppFonts.h3,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: SystemUiOverlayStyle.light.copyWith(
+              statusBarColor: Colors.transparent,
+            ),
+            child: Column(
+              children: [
+                DashboardHeader(
+                  greeting: greeting,
+                  name: name,
+                  identifier: nip,
+                  subtitle: faculty,
+                ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () => provider.fetchDashboard(),
+                    child: ListView(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      children: [
+                        // Stats Row
+                        _buildStatsRow(totalCourses, totalStudents, pendingLeaves),
+                        const SizedBox(height: AppSpacing.lg),
+
+                        // Today's Classes
+                        Text(
+                          'Kelas Hari Ini — $today',
+                          style: const TextStyle(
+                            fontSize: AppFonts.h3,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+
+                        if (todayCourses.isEmpty)
+                          _buildEmptyState('Tidak ada kelas hari ini', Icons.free_breakfast_outlined)
+                        else
+                          ...todayCourses.map((c) => _buildCourseCard(c)),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-
-                  if (todayCourses.isEmpty)
-                    _buildEmptyState('Tidak ada kelas hari ini', Icons.free_breakfast_outlined)
-                  else
-                    ...todayCourses.map((c) => _buildCourseCard(c)),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(LecturerProvider provider) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: AppShadows.glow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
-                child: const Icon(Icons.school, color: Colors.white, size: 28),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Selamat Datang,',
-                      style: TextStyle(
-                        fontSize: AppFonts.caption,
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-                    Text(
-                      provider.profile?.name ?? 'Dosen',
-                      style: const TextStyle(
-                        fontSize: AppFonts.h2,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -138,16 +113,16 @@ class _LecturerDashboardScreenState extends State<LecturerDashboardScreen> {
   Widget _buildStatsRow(int courses, int students, int pendingLeaves) {
     return Row(
       children: [
-        Expanded(child: _buildStatCard('Mata Kuliah', '$courses', Icons.book_outlined, AppColors.primary)),
+        Expanded(child: _buildStatCard('Mata Kuliah', '$courses', Icons.book_outlined)),
         const SizedBox(width: AppSpacing.sm),
-        Expanded(child: _buildStatCard('Mahasiswa', '$students', Icons.people_outline, AppColors.accent)),
+        Expanded(child: _buildStatCard('Mahasiswa', '$students', Icons.people_outline)),
         const SizedBox(width: AppSpacing.sm),
-        Expanded(child: _buildStatCard('Izin Pending', '$pendingLeaves', Icons.pending_actions, AppColors.warning)),
+        Expanded(child: _buildStatCard('Izin Pending', '$pendingLeaves', Icons.pending_actions)),
       ],
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(String label, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -157,14 +132,14 @@ class _LecturerDashboardScreenState extends State<LecturerDashboardScreen> {
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 24),
+          Icon(icon, color: AppColors.textSecondary, size: 22),
           const SizedBox(height: AppSpacing.xs),
           Text(
             value,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: AppFonts.h2,
-              fontWeight: FontWeight.w800,
-              color: color,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
             ),
           ),
           Text(
@@ -194,13 +169,13 @@ class _LecturerDashboardScreenState extends State<LecturerDashboardScreen> {
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: AppColors.primarySurface,
+              color: AppColors.borderLight,
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
-            child: const Icon(Icons.class_outlined, color: AppColors.primary),
+            child: const Icon(Icons.class_outlined, color: AppColors.textSecondary, size: 22),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -211,7 +186,7 @@ class _LecturerDashboardScreenState extends State<LecturerDashboardScreen> {
                   course['name'] ?? '',
                   style: const TextStyle(
                     fontSize: AppFonts.body,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -232,8 +207,8 @@ class _LecturerDashboardScreenState extends State<LecturerDashboardScreen> {
                 '$present/$enrolled',
                 style: const TextStyle(
                   fontSize: AppFonts.h3,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.success,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
                 ),
               ),
               const Text('Hadir', style: TextStyle(fontSize: AppFonts.small, color: AppColors.textMuted)),
@@ -253,7 +228,7 @@ class _LecturerDashboardScreenState extends State<LecturerDashboardScreen> {
       ),
       child: Column(
         children: [
-          Icon(icon, size: 48, color: AppColors.textMuted),
+          Icon(icon, size: 40, color: AppColors.textMuted),
           const SizedBox(height: AppSpacing.sm),
           Text(message, style: const TextStyle(color: AppColors.textMuted, fontSize: AppFonts.body)),
         ],
@@ -268,9 +243,9 @@ class _LecturerDashboardScreenState extends State<LecturerDashboardScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
+            const Icon(Icons.error_outline, size: 40, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.sm),
-            Text('Gagal memuat data', style: const TextStyle(fontSize: AppFonts.h3, fontWeight: FontWeight.w600)),
+            const Text('Gagal memuat data', style: TextStyle(fontSize: AppFonts.h3, fontWeight: FontWeight.w500)),
             const SizedBox(height: AppSpacing.xs),
             Text(error, style: const TextStyle(color: AppColors.textMuted, fontSize: AppFonts.caption), textAlign: TextAlign.center),
             const SizedBox(height: AppSpacing.md),

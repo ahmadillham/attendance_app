@@ -32,10 +32,22 @@ class _CourseAttendanceScreenState extends State<CourseAttendanceScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(widget.courseName),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        title: Text(
+          widget.courseName,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
+        centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.borderLight, height: 1),
+        ),
       ),
       body: Consumer<LecturerProvider>(
         builder: (context, provider, _) {
@@ -61,7 +73,6 @@ class _CourseAttendanceScreenState extends State<CourseAttendanceScreen> {
   }
 
   Widget _buildAttendanceTable(List enrollments, List attendances, int maxMeeting) {
-    // Build a map: studentId -> { meetingCount -> attendance }
     final Map<String, Map<int, Map<String, dynamic>>> attendanceMap = {};
     for (final a in attendances) {
       final sid = a['studentId'] ?? a['student']?['id'] ?? '';
@@ -72,52 +83,60 @@ class _CourseAttendanceScreenState extends State<CourseAttendanceScreen> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(AppColors.primarySurface),
-          headingTextStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            color: AppColors.primaryDark,
-            fontSize: AppFonts.caption,
-          ),
-          dataRowMinHeight: 44,
-          dataRowMaxHeight: 44,
-          columnSpacing: 12,
-          columns: [
-            const DataColumn(label: Text('NIM')),
-            const DataColumn(label: Text('Nama')),
-            for (int i = 1; i <= maxMeeting; i++)
-              DataColumn(label: Text('P$i'), numeric: true),
-          ],
-          rows: enrollments.map((e) {
-            final student = e['student'] as Map<String, dynamic>? ?? {};
-            final sid = student['id'] ?? '';
-            final studentAttendance = attendanceMap[sid] ?? {};
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(AppColors.background),
+            headingTextStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+              fontSize: 12,
+            ),
+            dataRowMinHeight: 52,
+            dataRowMaxHeight: 52,
+            columnSpacing: 20,
+            horizontalMargin: 16,
+            columns: [
+              const DataColumn(label: Text('NIM')),
+              const DataColumn(label: Text('NAMA')),
+              for (int i = 1; i <= maxMeeting; i++)
+                DataColumn(label: Text('P$i'), numeric: true),
+            ],
+            rows: enrollments.map((e) {
+              final student = e['student'] as Map<String, dynamic>? ?? {};
+              final sid = student['id'] ?? '';
+              final studentAttendance = attendanceMap[sid] ?? {};
 
-            return DataRow(
-              cells: [
-                DataCell(Text(student['studentId'] ?? '', style: const TextStyle(fontSize: AppFonts.caption))),
-                DataCell(
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 150),
-                    child: Text(
-                      student['name'] ?? '',
-                      style: const TextStyle(fontSize: AppFonts.caption),
-                      overflow: TextOverflow.ellipsis,
+              return DataRow(
+                cells: [
+                  DataCell(Text(student['studentId'] ?? '', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary))),
+                  DataCell(
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 160),
+                      child: Text(
+                        student['name'] ?? '',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
-                ),
-                for (int i = 1; i <= maxMeeting; i++)
-                  DataCell(
-                    _buildStatusChip(studentAttendance[i]),
-                    onTap: studentAttendance[i] != null
-                        ? () => _showEditDialog(studentAttendance[i]!)
-                        : null,
-                  ),
-              ],
-            );
-          }).toList(),
+                  for (int i = 1; i <= maxMeeting; i++)
+                    DataCell(
+                      _buildStatusChip(studentAttendance[i]),
+                      onTap: studentAttendance[i] != null
+                          ? () => _showEditBottomSheet(studentAttendance[i]!)
+                          : null,
+                    ),
+                ],
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
@@ -148,68 +167,132 @@ class _CourseAttendanceScreenState extends State<CourseAttendanceScreen> {
         label = '?';
     }
     return Container(
-      width: 28,
-      height: 28,
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(6),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Center(
         child: Text(
           label,
-          style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: AppFonts.caption),
+          style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
     );
   }
 
-  void _showEditDialog(Map<String, dynamic> attendance) {
+  void _showEditBottomSheet(Map<String, dynamic> attendance) {
     final id = attendance['id'];
     final currentStatus = attendance['status'];
     String selectedStatus = currentStatus;
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Edit Status Absensi'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: ['present', 'absent', 'leave'].map((status) {
-              final labels = {'present': 'Hadir', 'absent': 'Alpa', 'leave': 'Izin'};
-              final colors = {'present': AppColors.success, 'absent': AppColors.danger, 'leave': AppColors.warning};
-              return RadioListTile<String>(
-                title: Text(labels[status]!, style: TextStyle(color: colors[status])),
-                value: status,
-                groupValue: selectedStatus,
-                activeColor: colors[status],
-                onChanged: (v) => setDialogState(() => selectedStatus = v!),
-              );
-            }).toList(),
+        builder: (ctx, setDialogState) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(AppRadius.xl),
+              topRight: Radius.circular(AppRadius.xl),
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              onPressed: () async {
-                Navigator.pop(ctx);
-                final provider = context.read<LecturerProvider>();
-                final success = await provider.editAttendance(id, selectedStatus);
-                if (success) {
-                  await provider.fetchCourseAttendance(widget.courseId);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Status berhasil diubah')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Simpan', style: TextStyle(color: Colors.white)),
-            ),
-          ],
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const Text(
+                'Ubah Status Kehadiran',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...['present', 'absent', 'leave'].map((status) {
+                final labels = {'present': 'Hadir', 'absent': 'Alpa', 'leave': 'Izin'};
+                final icons = {'present': Icons.check_circle_outline, 'absent': Icons.cancel_outlined, 'leave': Icons.description_outlined};
+                final colors = {'present': AppColors.success, 'absent': AppColors.danger, 'leave': AppColors.warning};
+                
+                final isSelected = selectedStatus == status;
+
+                return GestureDetector(
+                  onTap: () => setDialogState(() => selectedStatus = status),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: isSelected ? colors[status]!.withValues(alpha: 0.08) : AppColors.background,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(
+                        color: isSelected ? colors[status]! : Colors.transparent,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(icons[status], color: colors[status], size: 22),
+                        const SizedBox(width: 12),
+                        Text(
+                          labels[status]!,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color: isSelected ? colors[status] : AppColors.textPrimary,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (isSelected)
+                          Icon(Icons.check_circle, color: colors[status], size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    elevation: 0,
+                  ),
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    final provider = context.read<LecturerProvider>();
+                    final success = await provider.editAttendance(id, selectedStatus);
+                    if (success) {
+                      await provider.fetchCourseAttendance(widget.courseId);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Status berhasil diubah')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Simpan Perubahan', style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

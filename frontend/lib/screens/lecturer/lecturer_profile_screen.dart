@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import '../../constants/theme.dart';
 import '../../providers/lecturer_provider.dart';
 import '../../services/api_service.dart';
-import 'course_attendance_screen.dart';
+import 'package:flutter/services.dart';
+import '../../widgets/section_label.dart';
 
 /// Lecturer Profile — shows NIP, courses, change password, logout
 class LecturerProfileScreen extends StatefulWidget {
@@ -39,39 +40,110 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
             return const Center(child: Text('Gagal memuat profil'));
           }
 
-          return SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              children: [
-                // Profile Card
-                _buildProfileCard(profile),
-                const SizedBox(height: AppSpacing.lg),
+          final name = profile.name;
 
-                // Courses taught
-                const Text(
-                  'Mata Kuliah yang Diampu',
-                  style: TextStyle(
-                    fontSize: AppFonts.h3,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: SystemUiOverlayStyle.light.copyWith(
+              statusBarColor: Colors.transparent,
+            ),
+            child: Column(
+              children: [
+                // Header + Avatar
+                Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(AppRadius.xl),
+                      bottomRight: Radius.circular(AppRadius.xl),
+                    ),
+                  ),
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 12,
+                    bottom: 24,
+                    left: 20,
+                    right: 20,
+                  ),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.person_outline, size: 36, color: Colors.white),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.white,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          profile.lecturerId,
+                          style: TextStyle(
+                            fontSize: AppFonts.caption,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                ...provider.courses.map((c) => _buildCourseItem(c)),
-                const SizedBox(height: AppSpacing.lg),
 
-                // Actions
-                _buildActionTile(
-                  icon: Icons.lock_outline,
-                  title: 'Ganti Password',
-                  onTap: () => _showChangePasswordDialog(),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                _buildActionTile(
-                  icon: Icons.logout,
-                  title: 'Keluar',
-                  color: AppColors.danger,
-                  onTap: () => _handleLogout(),
+                // Scrollable Body
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Academic Info
+                        const SectionLabel('INFORMASI AKADEMIK'),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            boxShadow: AppShadows.card,
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Column(
+                            children: [
+                              _infoRow(Icons.business_outlined, 'Departemen', profile.department),
+                              _infoRow(Icons.school_outlined, 'Fakultas', profile.faculty),
+                              _infoRow(Icons.mail_outlined, 'Email', profile.email, isLast: true),
+                            ],
+                          ),
+                        ),
+
+                        const SectionLabel('PENGATURAN'),
+                        // Change Password
+                        _actionCard(
+                          icon: Icons.key_outlined,
+                          label: 'Ubah Password',
+                          onTap: _showChangePasswordDialog,
+                        ),
+                        const SizedBox(height: 4),
+                        // Logout
+                        _actionCard(
+                          icon: Icons.logout,
+                          label: 'Keluar',
+                          labelColor: AppColors.danger,
+                          onTap: _handleLogout,
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -81,82 +153,39 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
     );
   }
 
-  Widget _buildProfileCard(dynamic profile) {
+  Widget _infoRow(IconData icon, String label, String value, {bool isLast = false}) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: AppShadows.glow,
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.person, size: 40, color: Colors.white),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            profile.name,
-            style: const TextStyle(
-              fontSize: AppFonts.h2,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'NIP: ${profile.lecturerId}',
-            style: TextStyle(
-              fontSize: AppFonts.body,
-              color: Colors.white.withValues(alpha: 0.85),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          // Info chips
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            alignment: WrapAlignment.center,
-            children: [
-              _infoChip(Icons.business, profile.department),
-              _infoChip(Icons.school, profile.faculty),
-              _infoChip(Icons.email_outlined, profile.email),
-              if (profile.phone != null) _infoChip(Icons.phone, profile.phone!),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoChip(IconData icon, String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppRadius.full),
+        border: isLast
+            ? null
+            : const Border(bottom: BorderSide(color: AppColors.borderLight, width: 1)),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: Colors.white70),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: AppFonts.caption, color: Colors.white),
-              overflow: TextOverflow.ellipsis,
+          Icon(icon, size: 18, color: AppColors.textMuted),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: AppFonts.small,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: AppFonts.body,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -164,129 +193,198 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
     );
   }
 
-  Widget _buildCourseItem(Map<String, dynamic> course) {
-    final enrollments = course['enrollments'] as List? ?? [];
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        boxShadow: AppShadows.card,
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.primarySurface,
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-          ),
-          child: Center(
-            child: Text(
-              course['code'] ?? '',
-              style: const TextStyle(
-                fontSize: AppFonts.small,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-        ),
-        title: Text(
-          course['name'] ?? '',
-          style: const TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          '${enrollments.length} mahasiswa',
-          style: const TextStyle(fontSize: AppFonts.caption, color: AppColors.textMuted),
-        ),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => CourseAttendanceScreen(
-                courseId: course['id'],
-                courseName: course['name'] ?? '',
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildActionTile({
+  Widget _actionCard({
     required IconData icon,
-    required String title,
+    required String label,
+    Color labelColor = AppColors.textPrimary,
     required VoidCallback onTap,
-    Color color = AppColors.textPrimary,
   }) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
         boxShadow: AppShadows.card,
       ),
-      child: ListTile(
-        leading: Icon(icon, color: color),
-        title: Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-        trailing: Icon(Icons.chevron_right, color: color.withValues(alpha: 0.5)),
-        onTap: onTap,
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: labelColor == AppColors.danger ? AppColors.danger : AppColors.textSecondary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: AppFonts.body,
+                      fontWeight: FontWeight.w400,
+                      color: labelColor,
+                    ),
+                  ),
+                ),
+                Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
   void _showChangePasswordDialog() {
-    final oldCtrl = TextEditingController();
-    final newCtrl = TextEditingController();
+    final oldPwController = TextEditingController();
+    final newPwController = TextEditingController();
+    final confirmPwController = TextEditingController();
 
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(AppRadius.xl),
+              topRight: Radius.circular(AppRadius.xl),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const Text(
+                'Ubah Password',
+                style: TextStyle(
+                  fontSize: AppFonts.h3,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              _inputLabel('PASSWORD LAMA'),
+              _inputField(oldPwController, 'Masukkan password lama'),
+              _inputLabel('PASSWORD BARU'),
+              _inputField(newPwController, 'Minimal 6 karakter'),
+              _inputLabel('KONFIRMASI PASSWORD'),
+              _inputField(confirmPwController, 'Ulangi password baru'),
+
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (oldPwController.text.trim().isEmpty) {
+                      _showAlert('Peringatan', 'Masukkan password lama.');
+                      return;
+                    }
+                    if (newPwController.text.length < 6) {
+                      _showAlert('Peringatan', 'Password baru minimal 6 karakter.');
+                      return;
+                    }
+                    if (newPwController.text != confirmPwController.text) {
+                      _showAlert('Peringatan', 'Konfirmasi password tidak cocok.');
+                      return;
+                    }
+                    Navigator.pop(ctx);
+                    final result = await ApiService.changeLecturerPassword(
+                      oldPwController.text.trim(),
+                      newPwController.text,
+                    );
+                    if (mounted) {
+                      _showAlert(
+                        result.success ? '✅ Berhasil' : '❌ Gagal',
+                        result.message,
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Simpan Password',
+                    style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAlert(String title, String message) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ganti Password'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: oldCtrl,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Password Lama',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: newCtrl,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Password Baru',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-              ),
-            ),
-          ],
-        ),
+        title: Text(title),
+        content: Text(message),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final result = await ApiService.changeLecturerPassword(oldCtrl.text, newCtrl.text);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(result.message),
-                    backgroundColor: result.success ? AppColors.success : AppColors.danger,
-                  ),
-                );
-              }
-            },
-            child: const Text('Simpan', style: TextStyle(color: Colors.white)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
         ],
+      ),
+    );
+  }
+
+  Widget _inputLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 8),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textMuted,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
+  Widget _inputField(TextEditingController controller, String placeholder) {
+    return TextField(
+      controller: controller,
+      obscureText: true,
+      style: const TextStyle(
+        fontSize: AppFonts.body,
+        color: AppColors.textPrimary,
+      ),
+      decoration: InputDecoration(
+        hintText: placeholder,
+        hintStyle: const TextStyle(color: AppColors.textMuted),
+        filled: true,
+        fillColor: AppColors.background,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
     );
   }
@@ -307,7 +405,6 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
               await ApiService.clearToken();
-              await ApiService.clearSavedCredentials();
               if (mounted) {
                 Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
               }

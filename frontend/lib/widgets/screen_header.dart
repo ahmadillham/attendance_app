@@ -60,7 +60,7 @@ class ScreenHeader extends StatelessWidget {
                   title,
                   style: const TextStyle(
                     fontSize: AppFonts.h2,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w400,
                     color: AppColors.white,
                     letterSpacing: -0.3,
                   ),

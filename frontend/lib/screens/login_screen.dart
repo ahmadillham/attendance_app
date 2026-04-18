@@ -279,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     'Time Mocker',
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w400,
                       color: AppColors.textPrimary,
                     ),
                   ),
@@ -296,7 +296,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ),
                         );
                       },
-                      child: const Text('Reset', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600)),
+                      child: const Text('Reset', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w400)),
                     ),
                 ],
               ),
@@ -308,7 +308,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 style: TextStyle(
                   fontSize: 12,
                   color: AppTime.isMocked ? AppColors.danger : AppColors.textMuted,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
               const SizedBox(height: 20),
@@ -347,7 +347,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           const Text('Tanggal', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                           Text(
                             '${mockDate.day.toString().padLeft(2, '0')}/${mockDate.month.toString().padLeft(2, '0')}/${mockDate.year}',
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
                           ),
                         ],
                       ),
@@ -392,7 +392,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           const Text('Waktu', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                           Text(
                             '${mockTime.hour.toString().padLeft(2, '0')}:${mockTime.minute.toString().padLeft(2, '0')}',
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
                           ),
                         ],
                       ),
@@ -407,7 +407,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.save, size: 18),
-                  label: const Text('Simpan Mock Time', style: TextStyle(fontWeight: FontWeight.w700)),
+                  label: const Text('Simpan Mock Time', style: TextStyle(fontWeight: FontWeight.w400)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.danger,
                     foregroundColor: Colors.white,
@@ -446,13 +446,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: _handleBackgroundTap,
+      onTapDown: (details) {
+        FocusScope.of(context).unfocus();
+        _handleBackgroundTap(details);
+      },
       behavior: HitTestBehavior.translucent,
       child: Scaffold(
         backgroundColor: AppColors.primary,
         body: AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.light.copyWith(
-            statusBarColor: AppColors.primaryDark,
+            statusBarColor: Colors.transparent,
           ),
           child: Stack(
             children: [
@@ -517,7 +520,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 'Absensi Kuliah',
                                 style: TextStyle(
                                   fontSize: 28,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w400,
                                   color: AppColors.white,
                                   letterSpacing: -0.5,
                                 ),
@@ -558,7 +561,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   'NIM',
                                   style: TextStyle(
                                     fontSize: AppFonts.caption,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w400,
                                     color: AppColors.textSecondary,
                                   ),
                                 ),
@@ -580,7 +583,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   'Password',
                                   style: TextStyle(
                                     fontSize: AppFonts.caption,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w400,
                                     color: AppColors.textSecondary,
                                   ),
                                 ),
@@ -604,7 +607,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   child: Container(
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(AppRadius.md),
-                                      boxShadow: AppShadows.glow,
                                     ),
                                     child: ElevatedButton(
                                       onPressed: _isLoading ? null : () => _handleLogin(),
@@ -623,7 +625,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                               'Memproses…',
                                               style: TextStyle(
                                                 fontSize: AppFonts.body,
-                                                fontWeight: FontWeight.w700,
+                                                fontWeight: FontWeight.w400,
                                               ),
                                             )
                                           : const Row(
@@ -633,7 +635,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   'Masuk',
                                                   style: TextStyle(
                                                     fontSize: AppFonts.body,
-                                                    fontWeight: FontWeight.w700,
+                                                    fontWeight: FontWeight.w400,
                                                   ),
                                                 ),
                                                 SizedBox(width: 8),
@@ -657,7 +659,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                           style: TextStyle(
                                             fontSize: AppFonts.caption,
                                             color: AppColors.textMuted,
-                                            fontWeight: FontWeight.w500,
+                                            fontWeight: FontWeight.w400,
                                           ),
                                         ),
                                       ),
@@ -701,7 +703,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                             'Masuk dengan ${_getBiometricLabel()}',
                                             style: const TextStyle(
                                               fontSize: AppFonts.body,
-                                              fontWeight: FontWeight.w600,
+                                              fontWeight: FontWeight.w400,
                                               color: AppColors.textPrimary,
                                             ),
                                           ),

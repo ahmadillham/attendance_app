@@ -15,7 +15,7 @@
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.7.0",
     "@prisma/client": "^7.7.0",
-    "@tensorflow/tfjs-node": "^4.22.0",
+    "@tensorflow/tfjs-node": "4.17.0",
     "@vladmandic/face-api": "^1.7.15",
     "bcryptjs": "^3.0.3",
     "canvas": "^3.2.3",
@@ -29,6 +29,10 @@
   "devDependencies": {
     "nodemon": "^3.1.14",
     "prisma": "^7.7.0"
+  },
+  "overrides": {
+    "@tensorflow/tfjs-node": "4.17.0",
+    "@tensorflow/tfjs-core": "4.17.0"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
 const prisma = require('../lib/prisma');
 const authMiddleware = require('../middlewares/authMiddleware');
 const studentMiddleware = require('../middlewares/studentMiddleware');
 const upload = require('../middlewares/uploadMiddleware');
 const { verifyFace } = require('../lib/faceVerify');
-const { extractDescriptor, isAvailable: isFaceModelAvailable } = require('../lib/faceDescriptor');
+const { extractDescriptor, extractLandmarks, isAvailable: isFaceModelAvailable } = require('../lib/faceDescriptor');
 const { attendanceValidation } = require('../validations/attendanceValidation');
 
 // Haversine distance calculator
@@ -22,8 +23,57 @@ const CAMPUS_LAT = -7.167311;
 const CAMPUS_LNG = 111.892951;
 const ALLOWED_RADIUS = 200;
 
+// Minimum landmark movement (Euclidean pixel distance) required between
+// the first and last liveness frames to prove the face physically moved.
+const LIVENESS_MOVEMENT_THRESHOLD = 8;
+
+/**
+ * Calculate average Euclidean distance between two 68-point landmark arrays.
+ * Each landmark is { x, y }. Returns the mean pixel displacement.
+ */
+function landmarkMovement(landmarksA, landmarksB) {
+    if (!landmarksA || !landmarksB) return 0;
+    const len = Math.min(landmarksA.length, landmarksB.length);
+    let totalDist = 0;
+    for (let i = 0; i < len; i++) {
+        const dx = landmarksA[i].x - landmarksB[i].x;
+        const dy = landmarksA[i].y - landmarksB[i].y;
+        totalDist += Math.sqrt(dx * dx + dy * dy);
+    }
+    return totalDist / len;
+}
+
+/**
+ * Safely delete an uploaded file (best-effort, non-blocking).
+ */
+function cleanupFile(filePath) {
+    if (!filePath) return;
+    fs.unlink(filePath, (err) => {
+        if (err && err.code !== 'ENOENT') {
+            console.warn(`⚠️  Failed to cleanup file ${filePath}: ${err.message}`);
+        }
+    });
+}
+
+/**
+ * Safely delete an array of uploaded files.
+ */
+function cleanupFiles(files) {
+    if (!files || !Array.isArray(files)) return;
+    files.forEach(f => cleanupFile(f.path));
+}
+
 // POST /api/attendance
-router.post('/', authMiddleware, studentMiddleware, upload.single('faceImage'), async (req, res) => {
+// Accepts multiple face images for liveness detection:
+//   - faceImages[0]: primary face image (used for identity verification)
+//   - faceImages[1..N]: liveness frames (used to detect physical face movement)
+// Also still supports single 'faceImage' field for backward compatibility.
+router.post('/', authMiddleware, studentMiddleware, upload.array('faceImages', 5), async (req, res) => {
+    // Track all uploaded files for cleanup
+    const uploadedFiles = req.files || [];
+    // Backward compatibility: if client sent single 'faceImage' field via upload.single
+    if (req.file) uploadedFiles.push(req.file);
+
     try {
         // Validate input fields (multer already parsed multipart, so req.body has strings)
         const validationData = {
@@ -40,7 +90,7 @@ router.post('/', authMiddleware, studentMiddleware, upload.single('faceImage'), 
         let { meetingCount } = validationData;
         const studentId = req.user.id;
 
-        // Security 4: Enrollment validation — student must be enrolled in this course (DIPINDAH KE ATAS agar logic db queries aman)
+        // Security 4: Enrollment validation — student must be enrolled in this course
         const enrollment = await prisma.enrollment.findUnique({
             where: { studentId_courseId: { studentId, courseId } },
         });
@@ -91,7 +141,7 @@ router.post('/', authMiddleware, studentMiddleware, upload.single('faceImage'), 
         }
 
         // Security 1: Biometric Face Validation
-        if (!req.file) {
+        if (!uploadedFiles.length) {
             return res.status(400).json({ message: 'Akses ditolak: Foto wajah (FaceID) wajib dilampirkan untuk verifikasi.' });
         }
 
@@ -106,14 +156,16 @@ router.post('/', authMiddleware, studentMiddleware, upload.single('faceImage'), 
         }
 
         const storedDescriptor = student.faceDescriptor;
+        let faceVerified = false;
 
         // Extract 128D descriptor from the uploaded face image
         if (isFaceModelAvailable()) {
-            // REAL MODE: Extract descriptor from uploaded photo and compare
-            const incomingDescriptor = await extractDescriptor(req.file.path);
+            // ─── Identity Verification (primary frame) ────────────────────
+            const primaryFile = uploadedFiles[0];
+            const incomingDescriptor = await extractDescriptor(primaryFile.path);
             if (!incomingDescriptor) {
-                return res.status(400).json({ 
-                    message: 'Wajah tidak terdeteksi dalam foto. Pastikan wajah terlihat jelas dan pencahayaan cukup.' 
+                return res.status(400).json({
+                    message: 'Wajah tidak terdeteksi dalam foto. Pastikan wajah terlihat jelas dan pencahayaan cukup.'
                 });
             }
 
@@ -123,10 +175,65 @@ router.post('/', authMiddleware, studentMiddleware, upload.single('faceImage'), 
                     message: `Akses ditolak: Wajah tidak cocok (similarity: ${faceResult.similarity}). Coba lagi dengan pencahayaan lebih baik.`,
                 });
             }
+
+            // ─── Liveness Detection (multi-frame challenge) ───────────────
+            // Requires at least 2 frames to detect physical face movement.
+            // If only 1 frame was sent, mark as identity-verified but not liveness-verified.
+            if (uploadedFiles.length >= 2) {
+                const firstLandmarks = await extractLandmarks(uploadedFiles[0].path);
+                const lastLandmarks = await extractLandmarks(uploadedFiles[uploadedFiles.length - 1].path);
+
+                if (!firstLandmarks || !lastLandmarks) {
+                    return res.status(400).json({
+                        message: 'Deteksi liveness gagal: Wajah tidak terdeteksi di salah satu frame. Pastikan wajah tetap terlihat selama verifikasi.',
+                    });
+                }
+
+                const movement = landmarkMovement(firstLandmarks, lastLandmarks);
+                console.log(JSON.stringify({
+                    event: 'liveness_check',
+                    movement: Math.round(movement * 100) / 100,
+                    threshold: LIVENESS_MOVEMENT_THRESHOLD,
+                    passed: movement >= LIVENESS_MOVEMENT_THRESHOLD,
+                    frames: uploadedFiles.length,
+                    studentId,
+                    timestamp: new Date().toISOString(),
+                }));
+
+                if (movement < LIVENESS_MOVEMENT_THRESHOLD) {
+                    return res.status(400).json({
+                        message: 'Deteksi liveness gagal: Tidak terdeteksi gerakan wajah. Pastikan Anda mengikuti instruksi (kedipkan mata / tolehkan kepala).',
+                    });
+                }
+
+                // Additionally verify that ALL liveness frames belong to the same person
+                for (let i = 1; i < uploadedFiles.length; i++) {
+                    const frameDescriptor = await extractDescriptor(uploadedFiles[i].path);
+                    if (!frameDescriptor) continue; // skip undetected frames
+                    const frameResult = verifyFace(storedDescriptor, frameDescriptor);
+                    if (!frameResult.matched) {
+                        return res.status(400).json({
+                            message: `Deteksi liveness gagal: Wajah pada frame ${i + 1} tidak cocok dengan data biometrik Anda.`,
+                        });
+                    }
+                }
+
+                faceVerified = true; // Full verification: identity + liveness
+            } else {
+                // Single frame: identity verified but no liveness check
+                faceVerified = true;
+                console.warn(`⚠️  Attendance from student ${studentId}: identity verified but liveness NOT checked (single frame).`);
+            }
         } else {
-            // BYPASS MODE: Models not loaded, skip face verification
-            // This allows the app to work without face recognition models installed
-            console.warn('⚠️  Face verification BYPASSED (models not loaded)');
+            // FLAG-AND-ALLOW MODE: Models not loaded, allow attendance but flag it
+            // In production (NODE_ENV=production), reject instead
+            if (process.env.NODE_ENV === 'production') {
+                return res.status(503).json({
+                    message: 'Layanan verifikasi wajah sedang tidak tersedia. Silakan coba lagi nanti atau hubungi administrator.',
+                });
+            }
+            faceVerified = false;
+            console.warn(`⚠️  Face verification UNAVAILABLE — attendance will be flagged as unverified (faceVerified=false) for student ${studentId}`);
         }
 
         // Security 2: Backend Geofencing Validation
@@ -143,13 +250,12 @@ router.post('/', authMiddleware, studentMiddleware, upload.single('faceImage'), 
             return res.status(409).json({ message: `Absensi pertemuan ke-${meetingCount} untuk mata kuliah ini sudah tercatat.` });
         }
 
-
-
         try {
             const attendance = await prisma.attendance.create({
                 data: {
                     status,
                     meetingCount,
+                    faceVerified,
                     studentId,
                     courseId
                 }
@@ -163,6 +269,10 @@ router.post('/', authMiddleware, studentMiddleware, upload.single('faceImage'), 
         }
     } catch (err) {
         res.status(500).json({ message: err.message });
+    } finally {
+        // Always cleanup uploaded face images — they're no longer needed
+        // after descriptor extraction (descriptors are in-memory only)
+        cleanupFiles(uploadedFiles);
     }
 });
 

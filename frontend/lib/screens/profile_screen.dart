@@ -25,21 +25,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  void _handleChangePhoto() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Ubah Foto'),
-        content: const Text(
-          'Fitur ini membutuhkan koneksi ke server.\n\nPada versi lengkap, Anda bisa memilih foto dari galeri atau mengambil foto baru.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
-        ],
-      ),
-    );
-  }
-
   void _showChangePassword() {
     final oldPwController = TextEditingController();
     final newPwController = TextEditingController();
@@ -79,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 'Ubah Password',
                 style: TextStyle(
                   fontSize: AppFonts.h3,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),
               ),
@@ -95,50 +80,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    boxShadow: AppShadows.glow,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (oldPwController.text.trim().isEmpty) {
+                      _showAlert('Peringatan', 'Masukkan password lama.');
+                      return;
+                    }
+                    if (newPwController.text.length < 6) {
+                      _showAlert('Peringatan', 'Password baru minimal 6 karakter.');
+                      return;
+                    }
+                    if (newPwController.text != confirmPwController.text) {
+                      _showAlert('Peringatan', 'Konfirmasi password tidak cocok.');
+                      return;
+                    }
+                    final error = await ApiService.changePassword(
+                      oldPwController.text.trim(),
+                      newPwController.text,
+                    );
+                    if (!context.mounted) return;
+                    Navigator.pop(ctx);
+                    if (error == null) {
+                      _showAlert('✅ Berhasil', 'Password berhasil diubah.');
+                    } else {
+                      _showAlert('❌ Gagal', error);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    elevation: 0,
                   ),
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      if (oldPwController.text.trim().isEmpty) {
-                        _showAlert('Peringatan', 'Masukkan password lama.');
-                        return;
-                      }
-                      if (newPwController.text.length < 6) {
-                        _showAlert('Peringatan', 'Password baru minimal 6 karakter.');
-                        return;
-                      }
-                      if (newPwController.text != confirmPwController.text) {
-                        _showAlert('Peringatan', 'Konfirmasi password tidak cocok.');
-                        return;
-                      }
-                      final error = await ApiService.changePassword(
-                        oldPwController.text.trim(),
-                        newPwController.text,
-                      );
-                      if (!context.mounted) return;
-                      Navigator.pop(ctx);
-                      if (error == null) {
-                        _showAlert('✅ Berhasil', 'Password berhasil diubah.');
-                      } else {
-                        _showAlert('❌ Gagal', error);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Simpan Password',
-                      style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w700),
-                    ),
+                  child: const Text(
+                    'Simpan Password',
+                    style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w500),
                   ),
                 ),
               ),
@@ -206,7 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: AppColors.background,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light.copyWith(
-          statusBarColor: AppColors.primaryDark,
+          statusBarColor: Colors.transparent,
         ),
         child: Column(
           children: [
@@ -221,81 +200,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 10,
-                bottom: 28,
+                top: MediaQuery.of(context).padding.top + 12,
+                bottom: 24,
                 left: 20,
                 right: 20,
               ),
               child: Center(
                 child: Column(
                   children: [
-                    GestureDetector(
-                      onTap: _handleChangePhoto,
-                      child: Stack(
-                        children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(26),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.3),
-                                width: 3,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                student.avatarInitials,
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: -4,
-                            right: -4,
-                            child: Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: AppColors.accent,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white, width: 3.5),
-                              ),
-                              child: const Icon(Icons.camera_alt, size: 18, color: AppColors.white),
-                            ),
-                          ),
-                        ],
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
                       ),
+                      child: const Icon(Icons.person_outline, size: 36, color: Colors.white),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       student.name,
                       style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.white,
                         letterSpacing: -0.3,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(AppRadius.full),
-                      ),
-                      child: Text(
-                        student.studentId,
-                        style: const TextStyle(
-                          fontSize: AppFonts.small,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.white,
-                        ),
+                    const SizedBox(height: 4),
+                    Text(
+                      student.studentId,
+                      style: TextStyle(
+                        fontSize: AppFonts.caption,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -321,26 +259,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     const SectionLabel('INFORMASI KONTAK'),
                     _infoCard([
-                      _InfoRowData(Icons.mail_outlined, 'Email', student.email, isEditable: true),
-                      _InfoRowData(Icons.phone_outlined, 'Telepon', student.phone, isLast: true, isEditable: true),
+                      _InfoRowData(Icons.mail_outlined, 'Email', student.email),
+                      _InfoRowData(Icons.phone_outlined, 'Telepon', student.phone, isLast: true),
                     ]),
 
                     const SectionLabel('PENGATURAN'),
 
-                    // Change Photo
-                    _actionCard(
-                      icon: Icons.image_outlined,
-                      iconBg: AppColors.primarySurface,
-                      iconColor: AppColors.primary,
-                      label: 'Ubah Foto Profil',
-                      onTap: _handleChangePhoto,
-                    ),
-
                     // Face Registration
                     _actionCard(
                       icon: Icons.face_retouching_natural,
-                      iconBg: AppColors.success,
-                      iconColor: AppColors.white,
                       label: 'Daftarkan Wajah (FaceID)',
                       onTap: () => Navigator.pushNamed(context, '/face-register'),
                     ),
@@ -348,8 +275,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // Change Password
                     _actionCard(
                       icon: Icons.key_outlined,
-                      iconBg: AppColors.warningSurface,
-                      iconColor: AppColors.warning,
                       label: 'Ubah Password',
                       onTap: _showChangePassword,
                     ),
@@ -359,11 +284,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // Logout
                     _actionCard(
                       icon: Icons.logout,
-                      iconBg: AppColors.dangerSurface,
-                      iconColor: AppColors.danger,
                       label: 'Keluar',
                       labelColor: AppColors.danger,
-                      chevronColor: AppColors.danger,
                       onTap: _handleLogout,
                     ),
 
@@ -404,7 +326,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Row(
         children: [
-          Icon(data.icon, size: 18, color: AppColors.primary),
+          Icon(data.icon, size: 18, color: AppColors.textMuted),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -422,18 +344,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   data.value,
                   style: const TextStyle(
                     fontSize: AppFonts.body,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w400,
                     color: AppColors.textPrimary,
                   ),
                 ),
               ],
             ),
           ),
-          if (data.isEditable)
-            Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: Icon(Icons.edit, size: 16, color: AppColors.textMuted.withValues(alpha: 0.7)),
-            ),
         ],
       ),
     );
@@ -441,11 +358,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _actionCard({
     required IconData icon,
-    required Color iconBg,
-    required Color iconColor,
     required String label,
     Color labelColor = AppColors.textPrimary,
-    Color chevronColor = AppColors.textMuted,
     required VoidCallback onTap,
   }) {
     return Container(
@@ -463,35 +377,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 18, color: iconColor),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: AppFonts.body,
-                  fontWeight: FontWeight.w600,
-                  color: labelColor,
+              children: [
+                Icon(icon, size: 20, color: labelColor == AppColors.danger ? AppColors.danger : AppColors.textSecondary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: AppFonts.body,
+                      fontWeight: FontWeight.w400,
+                      color: labelColor,
+                    ),
+                  ),
                 ),
-              ),
+                Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
+              ],
             ),
-              Icon(Icons.chevron_right, size: 16, color: chevronColor),
-            ],
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _inputLabel(String text) {
     return Padding(
@@ -500,9 +406,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         text,
         style: const TextStyle(
           fontSize: 11,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w500,
           color: AppColors.textMuted,
-          letterSpacing: 1,
+          letterSpacing: 0.8,
         ),
       ),
     );
@@ -536,7 +442,6 @@ class _InfoRowData {
   final String label;
   final String value;
   final bool isLast;
-  final bool isEditable;
 
-  const _InfoRowData(this.icon, this.label, this.value, {this.isLast = false, this.isEditable = false});
+  const _InfoRowData(this.icon, this.label, this.value, {this.isLast = false});
 }

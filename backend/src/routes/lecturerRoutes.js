@@ -21,7 +21,7 @@ router.get('/dashboard', async (req, res) => {
         const courses = await prisma.course.findMany({
             where: { lecturerId },
             include: {
-                schedules: { where: { dayOfWeek: today } },
+                schedules: today === 'Minggu' ? false : { where: { dayOfWeek: today } },
                 enrollments: { select: { id: true } },
             },
         });
@@ -34,7 +34,7 @@ router.get('/dashboard', async (req, res) => {
 
         const todayCourses = [];
         for (const course of courses) {
-            if (course.schedules.length === 0) continue;
+            if (!course.schedules || course.schedules.length === 0) continue;
 
             const attendanceCounts = await prisma.attendance.groupBy({
                 by: ['status'],

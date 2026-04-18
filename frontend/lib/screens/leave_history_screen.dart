@@ -64,7 +64,7 @@ class _LeaveHistoryScreenState extends State<LeaveHistoryScreen> {
         style: TextStyle(
           color: text,
           fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w400,
         ),
       ),
     );

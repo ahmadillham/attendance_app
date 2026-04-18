@@ -103,6 +103,7 @@ model Attendance {
   status         AttendanceStatus
   date           DateTime         @default(now())
   meetingCount   Int
+  faceVerified   Boolean          @default(false)
   studentId      String
   courseId        String
   student        Student          @relation(fields: [studentId], references: [id])

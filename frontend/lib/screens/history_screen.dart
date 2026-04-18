@@ -7,9 +7,9 @@ import '../providers/app_provider.dart';
 
 /// HistoryScreen — Attendance history per course
 const _statusMap = {
-  'present': {'label': 'Hadir', 'color': Color(0xFF14B8A6), 'bg': Color(0xFFCCFBF1), 'icon': Icons.check_circle},
-  'absent': {'label': 'Absen', 'color': Color(0xFFEF4444), 'bg': Color(0xFFFEE2E2), 'icon': Icons.cancel},
-  'leave': {'label': 'Izin', 'color': Color(0xFFF59E0B), 'bg': Color(0xFFFEF3C7), 'icon': Icons.description},
+  'present': {'label': 'Hadir', 'color': Color(0xFF4CAF7D), 'bg': Color(0xFFEDF7F1), 'icon': Icons.check_circle_outline},
+  'absent': {'label': 'Absen', 'color': Color(0xFFE5574F), 'bg': Color(0xFFFDEDEC), 'icon': Icons.cancel_outlined},
+  'leave': {'label': 'Izin', 'color': Color(0xFFE5A84B), 'bg': Color(0xFFFDF5E9), 'icon': Icons.description_outlined},
 };
 
 class HistoryScreen extends StatefulWidget {
@@ -76,7 +76,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 course.subject,
                 style: const TextStyle(
                   fontSize: AppFonts.h3,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w400,
                   color: AppColors.textPrimary,
                 ),
               ),
@@ -121,7 +121,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     'P${record.meeting}',
                                     style: const TextStyle(
                                       fontSize: AppFonts.small,
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.w400,
                                       color: AppColors.textSecondary,
                                     ),
                                   ),
@@ -152,7 +152,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   st['label'] as String,
                                   style: TextStyle(
                                     fontSize: AppFonts.small,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w400,
                                     color: st['color'] as Color,
                                   ),
                                 ),
@@ -183,7 +183,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                   child: const Text(
                     'Tutup',
-                    style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w700),
+                    style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w400),
                   ),
                 ),
               ),
@@ -214,7 +214,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
           return AnnotatedRegion<SystemUiOverlayStyle>(
             value: SystemUiOverlayStyle.light.copyWith(
-              statusBarColor: AppColors.primaryDark,
+              statusBarColor: Colors.transparent,
             ),
             child: Column(
           children: [
@@ -241,7 +241,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     'Riwayat Absensi',
                     style: TextStyle(
                       fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w400,
                       color: AppColors.white,
                       letterSpacing: -0.3,
                     ),
@@ -291,7 +291,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 course.subject,
                                 style: const TextStyle(
                                   fontSize: AppFonts.body,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w400,
                                   color: AppColors.textPrimary,
                                 ),
                               ),
@@ -319,17 +319,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   if (course.presentCount > 0)
                                     Expanded(
                                       flex: course.presentCount,
-                                      child: Container(color: const Color(0xFF14B8A6)),
+                                      child: Container(color: AppColors.success),
                                     ),
                                   if (course.leaveCount > 0)
                                     Expanded(
                                       flex: course.leaveCount,
-                                      child: Container(color: const Color(0xFFF59E0B)),
+                                      child: Container(color: AppColors.warning),
                                     ),
                                   if (course.absentCount > 0)
                                     Expanded(
                                       flex: course.absentCount,
-                                      child: Container(color: const Color(0xFFEF4444)),
+                                      child: Container(color: AppColors.danger),
                                     ),
                                 ],
                                 ),
@@ -339,11 +339,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               // Mini stats
                               Row(
                                 children: [
-                                  _miniStat(const Color(0xFF14B8A6), 'Hadir ${course.presentCount}'),
+                                  _miniStat(AppColors.success, 'Hadir ${course.presentCount}'),
                                   const SizedBox(width: 12),
-                                  _miniStat(const Color(0xFFEF4444), 'Absen ${course.absentCount}'),
+                                  _miniStat(AppColors.danger, 'Absen ${course.absentCount}'),
                                   const SizedBox(width: 12),
-                                  _miniStat(const Color(0xFFF59E0B), 'Izin ${course.leaveCount}'),
+                                  _miniStat(AppColors.warning, 'Izin ${course.leaveCount}'),
                                   const Spacer(),
                                   const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
                                 ],

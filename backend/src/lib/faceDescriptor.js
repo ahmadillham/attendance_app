@@ -12,6 +12,18 @@
 
 const path = require('path');
 const fs = require('fs');
+const util = require('util');
+
+// Monkey-patch removed Node.js util functions (removed in Node 24)
+// This prevents @tensorflow/tfjs-node from crashing during face extraction.
+if (!util.isNullOrUndefined) {
+    util.isNullOrUndefined = function(val) {
+        return val === null || val === undefined;
+    };
+}
+if (!util.isArray) {
+    util.isArray = Array.isArray;
+}
 
 let faceapi;
 let tf;
@@ -41,7 +53,7 @@ async function initFaceApi() {
         if (!fs.existsSync(MODELS_PATH)) {
             console.warn(`⚠️  Models directory not found: ${MODELS_PATH}`);
             console.warn('   Download models from: https://github.com/vladmandic/face-api/tree/master/model');
-            console.warn('   Face recognition will run in BYPASS mode (always match).');
+            console.warn('   Face recognition will be UNAVAILABLE (records flagged as unverified).');
             return;
         }
 
@@ -54,7 +66,7 @@ async function initFaceApi() {
         console.log('✅ Face recognition models loaded successfully.');
     } catch (err) {
         console.warn(`⚠️  Failed to initialize face-api: ${err.message}`);
-        console.warn('   Face recognition will run in BYPASS mode (always match).');
+        console.warn('   Face recognition will be UNAVAILABLE (records flagged as unverified).');
     }
 }
 
@@ -102,10 +114,50 @@ async function extractDescriptor(imagePath) {
 }
 
 /**
+ * Extract 68-point face landmarks from an image file.
+ * Used for liveness detection — comparing landmark positions between
+ * multiple frames to verify that the face physically moved.
+ * 
+ * @param {string} imagePath - Absolute path to the image file
+ * @returns {Promise<Array<{x: number, y: number}>|null>} 68 landmarks or null if no face detected
+ */
+async function extractLandmarks(imagePath) {
+    if (!modelsLoaded) {
+        console.warn('⚠️  Face models not loaded. Cannot extract landmarks.');
+        return null;
+    }
+
+    let tensor;
+    try {
+        const buffer = fs.readFileSync(imagePath);
+        tensor = tf.node.decodeImage(buffer, 3);
+
+        const detection = await faceapi
+            .detectSingleFace(tensor)
+            .withFaceLandmarks();
+
+        if (!detection) {
+            console.log('ℹ️  No face detected in image (landmarks).');
+            return null;
+        }
+
+        // Return array of {x, y} points (68 landmarks)
+        return detection.landmarks.positions.map(pt => ({ x: pt.x, y: pt.y }));
+    } catch (err) {
+        console.error(`❌ Landmark extraction failed: ${err.message}`);
+        return null;
+    } finally {
+        if (tensor) {
+            tensor.dispose();
+        }
+    }
+}
+
+/**
  * Check if face recognition is available (models loaded).
  */
 function isAvailable() {
     return modelsLoaded;
 }
 
-module.exports = { initFaceApi, extractDescriptor, isAvailable };
+module.exports = { initFaceApi, extractDescriptor, extractLandmarks, isAvailable };

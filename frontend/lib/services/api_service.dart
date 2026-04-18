@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -51,7 +52,7 @@ class ApiService {
     'API_URL',
     defaultValue: kIsWeb
         ? 'http://localhost:3000/api'
-        : 'http://192.168.1.21:3000/api',
+        : 'http://127.0.0.1:3000/api', // Menggunakan adb reverse
   );
 
   static const String _tokenKey = 'auth_token';
@@ -250,13 +251,18 @@ class ApiService {
 
   // ─── Attendance ──────────────────────────────────────────────────
 
-  static Future<bool> submitAttendance({
+  /// Submit attendance with face images for verification and liveness detection.
+  /// [imagePaths] can contain 1-5 face image paths:
+  ///   - First image: used for identity verification
+  ///   - Additional images: used for liveness detection (movement between frames)
+  /// Returns an [ApiResult] with the backend's specific error/success message.
+  static Future<ApiResult> submitAttendance({
     required String courseId,
     int? meetingCount,
     required String status,
     required double latitude,
     required double longitude,
-    String? imagePath,
+    List<String> imagePaths = const [],
   }) async {
     try {
       final token = await getToken();
@@ -271,20 +277,32 @@ class ApiService {
       request.fields['latitude'] = latitude.toString();
       request.fields['longitude'] = longitude.toString();
 
-      if (imagePath != null) {
+      // Add face images for liveness detection (multi-frame)
+      for (final path in imagePaths) {
         request.files.add(await http.MultipartFile.fromPath(
-          'faceImage', 
-          imagePath,
+          'faceImages',
+          path,
           contentType: MediaType('image', 'jpeg'),
         ));
       }
 
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 10));
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
-      return response.statusCode == 201 || response.statusCode == 200;
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return const ApiResult(success: true, message: 'Absensi berhasil divalidasi dan tersimpan di database!');
+      } else {
+        return ApiResult(
+          success: false,
+          message: data['message'] ?? 'Terjadi kesalahan saat memproses absensi.',
+        );
+      }
+    } on TimeoutException {
+      return const ApiResult(success: false, message: 'Koneksi timeout. Pastikan Anda terhubung ke jaringan yang sama dengan server.');
     } catch (e) {
       debugPrint('Attendance submit failed: $e');
-      return false;
+      return ApiResult(success: false, message: 'Server tidak dapat dihubungi: $e');
     }
   }
 

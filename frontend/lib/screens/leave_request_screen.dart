@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:provider/provider.dart';
 import '../constants/theme.dart';
 import '../widgets/screen_header.dart';
 import '../widgets/section_label.dart';
 import '../services/api_service.dart';
 import '../services/app_time.dart';
+import '../providers/app_provider.dart';
 
 /// LeaveRequestScreen — Modern Clean Design
 /// ─────────────────────────────────────────────
@@ -107,6 +109,10 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
     setState(() => _isSubmitting = false);
 
     if (reqSuccess) {
+      // Invalidate cached leave history so the history screen fetches fresh data
+      if (mounted) {
+        context.read<AppProvider>().leaveHistory = null;
+      }
       final reasonLabel = _leaveReasons.firstWhere((r) => r.value == _reason).label;
       _showAlert(
         '✅ Berhasil',
@@ -169,7 +175,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                 'Pilih Alasan',
                 style: TextStyle(
                   fontSize: AppFonts.h3,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w400,
                   color: AppColors.textPrimary,
                 ),
               ),
@@ -209,7 +215,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                         style: TextStyle(
                           fontSize: AppFonts.body,
                           color: _reason == item.value ? AppColors.primary : AppColors.textPrimary,
-                          fontWeight: _reason == item.value ? FontWeight.w600 : FontWeight.w400,
+                          fontWeight: _reason == item.value ? FontWeight.w400 : FontWeight.w400,
                         ),
                       ),
                     ),
@@ -268,7 +274,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                   'Tanggal Izin',
                   style: TextStyle(
                     fontSize: AppFonts.h3,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w400,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -286,7 +292,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                   '$tempDay ${monthNames[tempMonth]} $tempYear',
                   style: const TextStyle(
                     fontSize: AppFonts.body,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w400,
                     color: AppColors.primary,
                   ),
                 ),
@@ -345,7 +351,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                   ),
                   child: const Text(
                     'Konfirmasi',
-                    style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w700),
+                    style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w400),
                   ),
                 ),
               ),
@@ -419,7 +425,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                                   const SizedBox(height: 1),
                                   Text(
                                     _formatDate(_selectedDate),
-                                    style: const TextStyle(fontSize: AppFonts.caption, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                                    style: const TextStyle(fontSize: AppFonts.caption, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
                                   ),
                                 ],
                               ),
@@ -463,7 +469,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                                 style: TextStyle(
                                   fontSize: AppFonts.body,
                                   color: _reason != null ? AppColors.textPrimary : AppColors.textMuted,
-                                  fontWeight: _reason != null ? FontWeight.w500 : FontWeight.w400,
+                                  fontWeight: _reason != null ? FontWeight.w400 : FontWeight.w400,
                                 ),
                               ),
                             ),
@@ -550,7 +556,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                                     _document?.name ?? 'Unggah Dokumen',
                                     style: const TextStyle(
                                       fontSize: AppFonts.body,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w400,
                                       color: AppColors.textPrimary,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -596,7 +602,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                               : const Icon(Icons.send, size: 18),
                           label: Text(
                             _isSubmitting ? 'Mengirim...' : 'Kirim Perizinan',
-                            style: const TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w700),
+                            style: const TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w400),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
@@ -669,7 +675,7 @@ class _PickerColumn extends StatelessWidget {
               '$value',
               style: const TextStyle(
                 fontSize: 22,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w400,
                 color: AppColors.textPrimary,
               ),
             ),

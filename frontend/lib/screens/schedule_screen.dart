@@ -83,7 +83,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       backgroundColor: AppColors.background,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light.copyWith(
-          statusBarColor: AppColors.primaryDark,
+          statusBarColor: Colors.transparent,
         ),
         child: Column(
           children: [
@@ -110,7 +110,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     'Jadwal Kuliah',
                     style: TextStyle(
                       fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w400,
                       color: AppColors.white,
                       letterSpacing: -0.3,
                     ),
@@ -154,7 +154,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             _days[i],
                             style: TextStyle(
                               fontSize: AppFonts.caption,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w400,
                               color: isActive ? AppColors.white : AppColors.textSecondary,
                             ),
                           ),
@@ -195,7 +195,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                       'Tidak ada jadwal',
                                       style: TextStyle(
                                         fontSize: AppFonts.body,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w400,
                                         color: AppColors.textPrimary,
                                       ),
                                     ),
@@ -231,7 +231,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                                   width: 10,
                                                   height: 10,
                                                   decoration: BoxDecoration(
-                                                    color: index == 0 ? AppColors.accent : AppColors.primary,
+                                                    color: AppColors.textMuted,
                                                     shape: BoxShape.circle,
                                                   ),
                                                 ),
@@ -265,8 +265,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                                         item.time,
                                                         style: const TextStyle(
                                                           fontSize: AppFonts.small,
-                                                          fontWeight: FontWeight.w700,
-                                                          color: AppColors.primary,
+                                                          fontWeight: FontWeight.w400,
+                                                          color: AppColors.textSecondary,
                                                         ),
                                                       ),
                                                       Container(
@@ -279,7 +279,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                                           item.room,
                                                           style: const TextStyle(
                                                             fontSize: AppFonts.small,
-                                                            fontWeight: FontWeight.w600,
+                                                            fontWeight: FontWeight.w400,
                                                             color: AppColors.textMuted,
                                                           ),
                                                         ),
@@ -291,7 +291,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                                     item.subject,
                                                     style: const TextStyle(
                                                       fontSize: AppFonts.body,
-                                                      fontWeight: FontWeight.w600,
+                                                      fontWeight: FontWeight.w400,
                                                       color: AppColors.textPrimary,
                                                     ),
                                                   ),

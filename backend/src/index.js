@@ -19,7 +19,7 @@ app.use((req, res, next) => {
 
 app.use('/uploads', express.static('uploads', {
     setHeaders: (res, path, stat) => {
-        res.set('Content-Disposition', 'attachment');
+        res.set('Content-Disposition', 'inline'); // changed from attachment to inline to view in browser
         res.set('X-Content-Type-Options', 'nosniff');
     }
 }));

@@ -34,19 +34,49 @@ function cosineSimilarity(a, b) {
 }
 
 /**
+ * Default threshold for cosine similarity matching.
+ * Can be overridden via FACE_MATCH_THRESHOLD env variable.
+ * 
+ * Academic guidance for 128D face embeddings (FaceNet/ArcFace-style):
+ *   - 0.60 = very permissive (siblings may pass)
+ *   - 0.75 = moderate security (recommended for university context)
+ *   - 0.85 = high security (may reject legitimate users in poor lighting)
+ */
+const DEFAULT_THRESHOLD = 0.75;
+
+function getThreshold() {
+    const envVal = parseFloat(process.env.FACE_MATCH_THRESHOLD);
+    return !isNaN(envVal) && envVal > 0 && envVal <= 1 ? envVal : DEFAULT_THRESHOLD;
+}
+
+/**
  * Verify face match.
  * 
  * @param {number[]} storedDescriptor - 128D face embedding from DB
  * @param {number[]} incomingDescriptor - 128D face embedding from camera capture
- * @param {number} threshold - Minimum cosine similarity to consider a match (default 0.6)
- * @returns {{ matched: boolean, similarity: number }}
+ * @param {number} [threshold] - Override threshold (uses env/default if omitted)
+ * @returns {{ matched: boolean, similarity: number, threshold: number }}
  */
-function verifyFace(storedDescriptor, incomingDescriptor, threshold = 0.6) {
+function verifyFace(storedDescriptor, incomingDescriptor, threshold) {
+    const effectiveThreshold = threshold ?? getThreshold();
     const similarity = cosineSimilarity(storedDescriptor, incomingDescriptor);
+    const matched = similarity >= effectiveThreshold;
+    const roundedSimilarity = Math.round(similarity * 1000) / 1000;
+
+    // Structured log for threshold calibration
+    console.log(JSON.stringify({
+        event: 'face_verify',
+        matched,
+        similarity: roundedSimilarity,
+        threshold: effectiveThreshold,
+        timestamp: new Date().toISOString(),
+    }));
+
     return {
-        matched: similarity >= threshold,
-        similarity: Math.round(similarity * 1000) / 1000, // 3 decimal places
+        matched,
+        similarity: roundedSimilarity,
+        threshold: effectiveThreshold,
     };
 }
 
-module.exports = { cosineSimilarity, verifyFace };
+module.exports = { cosineSimilarity, verifyFace, getThreshold };

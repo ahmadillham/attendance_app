@@ -95,26 +95,19 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo placeholder or icon
+              // Logo
               Container(
-                width: 100,
-                height: 100,
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
-                  color: AppColors.white,
+                  color: Colors.white.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    )
-                  ],
                 ),
                 child: const Center(
                   child: Icon(
-                    Icons.school,
-                    size: 50,
-                    color: AppColors.primary,
+                    Icons.school_outlined,
+                    size: 40,
+                    color: AppColors.white,
                   ),
                 ),
               ),
@@ -123,17 +116,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 'Absensi Kuliah',
                 style: TextStyle(
                   color: AppColors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.3,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 'Sistem Presensi Pintar',
                 style: TextStyle(
-                  color: AppColors.white.withValues(alpha: 0.8),
-                  fontSize: 16,
+                  color: AppColors.white.withValues(alpha: 0.6),
+                  fontSize: 14,
                 ),
               ),
             ],

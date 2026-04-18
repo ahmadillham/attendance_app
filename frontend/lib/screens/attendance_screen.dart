@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart' as perm;
 import 'package:provider/provider.dart';
 import '../constants/theme.dart';
 import '../constants/mock_data.dart';
@@ -13,8 +14,8 @@ import '../providers/app_provider.dart';
 
 /// AttendanceScreen — Modern Clean Design
 /// ─────────────────────────────────────────────
-/// Camera + GPS verification with frosted glass panels
-/// and smooth scanning animation.
+/// Camera + GPS verification with frosted glass panels,
+/// multi-frame liveness detection, and smooth scanning animation.
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
 
@@ -26,7 +27,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
   CameraController? _cameraController;
   bool _cameraInitialized = false;
   bool _cameraPermissionDenied = false;
+  bool _cameraPermissionPermanent = false;
   bool _locationPermissionDenied = false;
+  bool _locationPermissionPermanent = false;
+  bool _mockLocationDetected = false;
 
   double? _currentLat;
   double? _currentLng;
@@ -37,10 +41,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
   bool _showResult = false;
   ScheduleItem? _activeSchedule; // dynamically resolved from today's schedule
 
+  // Liveness challenge state
+  String? _livenessPrompt;
+
   late AnimationController _scanAnimController;
   late Animation<double> _scanAnim;
   late AnimationController _pulseAnimController;
   late Animation<double> _pulseAnim;
+
+  // Random liveness prompts (Indonesian)
+  static const _livenessPrompts = [
+    'Tolehkan kepala ke kanan',
+    'Tolehkan kepala ke kiri',
+    'Anggukkan kepala',
+    'Kedipkan mata 2 kali',
+  ];
 
   @override
   void initState() {
@@ -77,6 +92,28 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
   }
 
   Future<void> _initCamera() async {
+    // Use permission_handler for explicit permission control
+    var status = await perm.Permission.camera.status;
+
+    if (status.isDenied) {
+      status = await perm.Permission.camera.request();
+    }
+
+    if (status.isPermanentlyDenied) {
+      if (mounted) {
+        setState(() {
+          _cameraPermissionDenied = true;
+          _cameraPermissionPermanent = true;
+        });
+      }
+      return;
+    }
+
+    if (status.isDenied) {
+      if (mounted) setState(() => _cameraPermissionDenied = true);
+      return;
+    }
+
     try {
       final cameras = await availableCameras();
       final front = cameras.firstWhere(
@@ -85,8 +122,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
       );
       _cameraController = CameraController(front, ResolutionPreset.high);
       await _cameraController!.initialize();
-      if (mounted) setState(() => _cameraInitialized = true);
+      if (mounted) {
+        setState(() {
+          _cameraInitialized = true;
+          _cameraPermissionDenied = false;
+          _cameraPermissionPermanent = false;
+        });
+      }
     } catch (e) {
+      debugPrint('Camera init error: $e');
       if (mounted) setState(() => _cameraPermissionDenied = true);
     }
   }
@@ -108,13 +152,27 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
         }
       }
       if (permission == LocationPermission.deniedForever) {
-        if (mounted) setState(() => _locationPermissionDenied = true);
+        if (mounted) {
+          setState(() {
+            _locationPermissionDenied = true;
+            _locationPermissionPermanent = true;
+          });
+        }
         return;
       }
 
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
+
+      // GPS Spoofing Detection — reject mocked locations
+      if (pos.isMocked) {
+        if (mounted) {
+          setState(() => _mockLocationDetected = true);
+        }
+        return;
+      }
+
       final dist = _haversineDistance(pos.latitude, pos.longitude, Campus.latitude, Campus.longitude);
       if (mounted) {
         setState(() {
@@ -122,6 +180,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
           _currentLng = pos.longitude;
           _distance = dist;
           _isInRange = dist <= Campus.allowedRadiusMeters;
+          _mockLocationDetected = false;
         });
       }
     } catch (e) {
@@ -188,7 +247,51 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
     return diff >= -earlyOpenMinutes && diff <= lateCloseMinutes;
   }
 
+  /// Capture multiple frames for liveness detection.
+  /// Takes 3 photos spaced ~800ms apart while showing the liveness prompt.
+  Future<List<String>> _captureMultiFrame() async {
+    final List<String> paths = [];
+
+    // Select a random liveness prompt
+    final prompt = _livenessPrompts[Random().nextInt(_livenessPrompts.length)];
+    setState(() => _livenessPrompt = prompt);
+
+    // Frame 1: initial position
+    final frame1 = await _cameraController!.takePicture();
+    paths.add(frame1.path);
+
+    // Wait for user to perform the action
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return paths;
+
+    // Frame 2: mid-action
+    final frame2 = await _cameraController!.takePicture();
+    paths.add(frame2.path);
+
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return paths;
+
+    // Frame 3: post-action
+    final frame3 = await _cameraController!.takePicture();
+    paths.add(frame3.path);
+
+    setState(() => _livenessPrompt = null);
+    return paths;
+  }
+
   Future<void> _handleCapture() async {
+    // Block if mock location detected
+    if (_mockLocationDetected) {
+      setState(() {
+        _result = {
+          'success': false,
+          'message': 'Lokasi palsu terdeteksi. Nonaktifkan aplikasi "Fake GPS" dan coba lagi.',
+        };
+        _showResult = true;
+      });
+      return;
+    }
+
     // Verify time window before proceeding
     if (!_isWithinAttendanceWindow()) {
       setState(() {
@@ -206,28 +309,24 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
     _scanAnimController.repeat(reverse: true);
 
     try {
-      // 1. Eksekusi Native Camera API
-      final XFile picture = await _cameraController!.takePicture();
+      // 1. Multi-frame capture for liveness detection
+      final imagePaths = await _captureMultiFrame();
       if (!mounted) return;
 
-      // 2. Kirim Gambar Fisik ke Backend Node.js
+      // 2. Submit to backend with all frames
       final activeCourseId = _activeSchedule?.courseId ?? 'cl_logmat';
-      final reqSuccess = await ApiService.submitAttendance(
+      final result = await ApiService.submitAttendance(
         courseId: activeCourseId,
         status: "present",
         latitude: _currentLat ?? 0.0,
         longitude: _currentLng ?? 0.0,
-        imagePath: picture.path,
+        imagePaths: imagePaths,
       );
 
       _scanAnimController.stop();
       setState(() {
          _isScanning = false;
-         if (reqSuccess) {
-           _result = {'success': true, 'message': 'Absensi berhasil divalidasi dan tersimpan di database!'};
-         } else {
-           _result = {'success': false, 'message': 'Terjadi kesalahan sistem saat menghubungi backend.'};
-         }
+         _result = {'success': result.success, 'message': result.message};
          _showResult = true;
       });
     } catch (e) {
@@ -247,9 +346,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
       return _buildPermissionScreen(
         icon: Icons.camera_alt_outlined,
         title: 'Izin Kamera Diperlukan',
-        desc: 'Aplikasi membutuhkan akses kamera untuk verifikasi wajah.',
-        buttonText: 'Beri Izin Kamera',
-        onPressed: _initCamera,
+        desc: _cameraPermissionPermanent
+            ? 'Izin kamera ditolak secara permanen. Buka Pengaturan untuk mengaktifkannya.'
+            : 'Aplikasi membutuhkan akses kamera untuk verifikasi wajah.',
+        buttonText: _cameraPermissionPermanent ? 'Buka Pengaturan' : 'Beri Izin Kamera',
+        onPressed: _cameraPermissionPermanent ? () => perm.openAppSettings() : _initCamera,
+      );
+    }
+
+    // Mock location detected
+    if (_mockLocationDetected) {
+      return _buildPermissionScreen(
+        icon: Icons.gps_off,
+        title: 'Lokasi Palsu Terdeteksi',
+        desc: 'Aplikasi "Fake GPS" terdeteksi. Nonaktifkan lokasi palsu lalu coba lagi.',
+        buttonText: 'Coba Lagi',
+        onPressed: _initLocation,
       );
     }
 
@@ -258,7 +370,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
       return _buildPermissionScreen(
         icon: Icons.location_off_outlined,
         title: 'Izin Lokasi Diperlukan',
-        desc: 'Aplikasi membutuhkan akses lokasi untuk memvalidasi kehadiran Anda.',
+        desc: _locationPermissionPermanent
+            ? 'Izin lokasi ditolak secara permanen. Buka Pengaturan untuk mengaktifkannya.'
+            : 'Aplikasi membutuhkan akses lokasi untuk memvalidasi kehadiran Anda.',
+        buttonText: _locationPermissionPermanent ? 'Buka Pengaturan' : 'Beri Izin Lokasi',
+        onPressed: _locationPermissionPermanent ? () => perm.openAppSettings() : _initLocation,
       );
     }
 
@@ -312,7 +428,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                           'Verifikasi Wajah',
                           style: TextStyle(
                             fontSize: AppFonts.h3,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w400,
                             color: AppColors.white,
                             letterSpacing: -0.2,
                           ),
@@ -364,10 +480,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        _isScanning ? 'Memindai wajah…' : 'Posisikan wajah di dalam bingkai',
+                        _livenessPrompt != null
+                            ? _livenessPrompt!
+                            : _isScanning
+                                ? 'Memindai wajah…'
+                                : 'Posisikan wajah di dalam bingkai',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: AppFonts.caption,
-                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: _livenessPrompt != null ? AppFonts.body : AppFonts.caption,
+                          fontWeight: _livenessPrompt != null ? FontWeight.w400 : FontWeight.normal,
+                          color: _livenessPrompt != null
+                              ? AppColors.accent
+                              : Colors.white.withValues(alpha: 0.85),
                         ),
                       ),
                     ],
@@ -412,7 +536,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                                   style: const TextStyle(
                                     fontSize: AppFonts.caption,
                                     color: AppColors.white,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w400,
                                   ),
                                 ),
                               ),
@@ -474,7 +598,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                                                   : 'Di Luar Waktu Absensi',
                                               style: const TextStyle(
                                                 fontSize: AppFonts.body,
-                                                fontWeight: FontWeight.w700,
+                                                fontWeight: FontWeight.w400,
                                               ),
                                             ),
                                           ],
@@ -526,7 +650,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                           _result?['success'] == true ? 'Berhasil!' : 'Gagal',
                           style: const TextStyle(
                             fontSize: 22,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w400,
                             color: AppColors.textPrimary,
                           ),
                         ),
@@ -559,7 +683,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                             ),
                             child: Text(
                               _result?['success'] == true ? 'Kembali ke Dashboard' : 'Coba Lagi',
-                              style: const TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w700),
+                              style: const TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w400),
                             ),
                           ),
                         ),
@@ -641,7 +765,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                   title,
                   style: const TextStyle(
                     fontSize: AppFonts.h2,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w400,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -667,7 +791,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                         borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                     ),
-                    child: Text(buttonText, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    child: Text(buttonText, style: const TextStyle(fontWeight: FontWeight.w400)),
                   ),
                 ],
               ],
