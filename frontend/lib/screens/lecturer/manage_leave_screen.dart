@@ -216,7 +216,7 @@ class _ManageLeaveScreenState extends State<ManageLeaveScreen> with SingleTicker
 
             // Reason & Description
             Text(
-              leave['reason'] ?? '',
+              leave['course']?['name'] != null ? '${leave['reason']} - ${leave['course']['name']}' : (leave['reason'] ?? ''),
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
             ),
             if (leave['description'] != null && leave['description'].toString().isNotEmpty) ...[

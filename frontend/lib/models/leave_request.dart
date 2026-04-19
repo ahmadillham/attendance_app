@@ -7,6 +7,8 @@ class LeaveRequest {
   final String status; // PENDING, APPROVED, REJECTED
   final String date;
   final String createdAt;
+  final String? courseName;
+  final String? courseCode;
 
   const LeaveRequest({
     required this.id,
@@ -16,9 +18,18 @@ class LeaveRequest {
     required this.status,
     required this.date,
     required this.createdAt,
+    this.courseName,
+    this.courseCode,
   });
 
   factory LeaveRequest.fromJson(Map<String, dynamic> json) {
+    String? cName;
+    String? cCode;
+    if (json['course'] != null) {
+      cName = json['course']['name'];
+      cCode = json['course']['code'];
+    }
+
     return LeaveRequest(
       id: json['id']?.toString() ?? '',
       reason: json['reason'] ?? '',
@@ -27,6 +38,8 @@ class LeaveRequest {
       status: json['status'] ?? 'PENDING',
       date: json['date'] ?? '',
       createdAt: json['createdAt'] ?? '',
+      courseName: cName,
+      courseCode: cCode,
     );
   }
 

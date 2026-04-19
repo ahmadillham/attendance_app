@@ -187,16 +187,11 @@ router.get('/leave-requests', async (req, res) => {
     try {
         const leaveRequests = await prisma.leaveRequest.findMany({
             where: {
-                student: {
-                    enrollments: {
-                        some: {
-                            course: { lecturerId: req.user.id },
-                        },
-                    },
-                },
+                course: { lecturerId: req.user.id },
             },
             include: {
                 student: { select: { id: true, studentId: true, name: true, department: true } },
+                course: { select: { name: true, code: true } },
                 reviewedBy: { select: { name: true } },
             },
             orderBy: { createdAt: 'desc' },
@@ -220,25 +215,12 @@ router.put('/leave-requests/:id', async (req, res) => {
         // Verify the leave request exists and fetch student enrollments
         const existing = await prisma.leaveRequest.findUnique({ 
             where: { id: req.params.id },
-            include: {
-                student: {
-                    include: {
-                        enrollments: {
-                            include: { course: true }
-                        }
-                    }
-                }
-            }
+            include: { course: true }
         });
         if (!existing) return res.status(404).json({ message: 'Pengajuan izin tidak ditemukan' });
 
-        // IDOR Fix: Verify that the student is enrolled in at least one of this lecturer's courses
-        const isAuthorized = existing.student.enrollments.some(
-            (enrollment) => enrollment.course.lecturerId === req.user.id
-        );
-
-        if (!isAuthorized) {
-            return res.status(403).json({ message: 'Akses ditolak: Mahasiswa tidak mengambil mata kuliah Anda.' });
+        if (existing.course.lecturerId !== req.user.id) {
+            return res.status(403).json({ message: 'Akses ditolak: Anda bukan pengampu mata kuliah ini.' });
         }
 
         const updated = await prisma.leaveRequest.update({

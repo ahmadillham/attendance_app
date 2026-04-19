@@ -8,6 +8,7 @@ import '../widgets/section_label.dart';
 import '../services/api_service.dart';
 import '../services/app_time.dart';
 import '../providers/app_provider.dart';
+import '../models/schedule.dart';
 
 /// LeaveRequestScreen — Modern Clean Design
 /// ─────────────────────────────────────────────
@@ -49,10 +50,45 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
   PlatformFile? _document;
   bool _isSubmitting = false;
 
+  List<String> _selectedCourseIds = [];
+  List<ScheduleItem> _availableSchedules = [];
+  bool _isLoadingSchedules = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchSchedulesForSelectedDate();
+  }
+
   @override
   void dispose() {
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchSchedulesForSelectedDate() async {
+    setState(() {
+      _isLoadingSchedules = true;
+      _availableSchedules = [];
+      _selectedCourseIds.clear();
+    });
+
+    try {
+      const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      final dayName = dayNames[_selectedDate.weekday % 7];
+      final schedules = await ApiService.getSchedulesByDay(dayName);
+      if (mounted) {
+        setState(() {
+          _availableSchedules = schedules;
+          _selectedCourseIds = schedules.map((s) => s.courseId).whereType<String>().toList();
+          _isLoadingSchedules = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingSchedules = false);
+      }
+    }
   }
 
   String _formatDate(DateTime date) {
@@ -80,6 +116,10 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
   }
 
   Future<void> _handleSubmit() async {
+    if (_selectedCourseIds.isEmpty) {
+      _showAlert('Peringatan', 'Pilih minimal satu mata kuliah.');
+      return;
+    }
     if (_reason == null) {
       _showAlert('Peringatan', 'Pilih alasan izin.');
       return;
@@ -96,9 +136,11 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
 
     try {
       reqSuccess = await ApiService.submitLeaveRequest(
+        courseIds: _selectedCourseIds,
         leaveType: _reason!,
         date: _selectedDate.toIso8601String(),
         reason: _descriptionController.text.trim(),
+        clientTime: AppTime.now().toIso8601String(),
         document: _document,
       );
     } catch (e) {
@@ -338,6 +380,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                     setState(() {
                       _selectedDate = DateTime(tempYear, tempMonth, tempDay);
                     });
+                    _fetchSchedulesForSelectedDate();
                     Navigator.pop(ctx);
                   },
                   style: ElevatedButton.styleFrom(
@@ -396,45 +439,132 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                   children: [
                     // ── Date Selection ─────────────────
                     const SectionLabel('TANGGAL IZIN'),
-                    GestureDetector(
-                      onTap: _showDatePickerSheet,
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          boxShadow: AppShadows.card,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: AppColors.primarySurface,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        boxShadow: AppShadows.card,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.primarySurface,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Tanggal', style: TextStyle(fontSize: AppFonts.small, color: AppColors.textMuted)),
-                                  const SizedBox(height: 1),
-                                  Text(
-                                    _formatDate(_selectedDate),
-                                    style: const TextStyle(fontSize: AppFonts.caption, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
-                                  ),
-                                ],
-                              ),
+                            child: const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Tanggal', style: TextStyle(fontSize: AppFonts.small, color: AppColors.textMuted)),
+                                const SizedBox(height: 1),
+                                Text(
+                                  _formatDate(_selectedDate),
+                                  style: const TextStyle(fontSize: AppFonts.caption, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+                                ),
+                              ],
                             ),
-                            const Icon(Icons.chevron_right, size: 20, color: AppColors.textMuted),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
+                    const SizedBox(height: 24),
+
+                    // ── Course Selection ──────────────
+                    if (_isLoadingSchedules)
+                      const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+                    else if (_availableSchedules.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.only(bottom: 24),
+                        decoration: BoxDecoration(
+                          color: AppColors.dangerSurface,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.error_outline, color: AppColors.danger),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Tidak ada jadwal mata kuliah pada tanggal ini.',
+                                style: TextStyle(color: AppColors.danger, fontSize: AppFonts.body),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else ...[
+                      const SectionLabel('PILIH MATA KULIAH'),
+                      ..._availableSchedules.map((schedule) {
+                        final courseId = schedule.courseId;
+                        if (courseId == null) return const SizedBox.shrink();
+                        
+                        final isSelected = _selectedCourseIds.contains(courseId);
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedCourseIds.remove(courseId);
+                              } else {
+                                _selectedCourseIds.add(courseId);
+                              }
+                            });
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColors.primarySurface : AppColors.surface,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(
+                                color: isSelected ? AppColors.primary : AppColors.borderLight,
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+                                  color: isSelected ? AppColors.primary : AppColors.textMuted,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        schedule.subject,
+                                        style: TextStyle(
+                                          fontSize: AppFonts.body,
+                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                          color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        schedule.time,
+                                        style: TextStyle(
+                                          fontSize: AppFonts.small,
+                                          color: isSelected ? AppColors.primary.withValues(alpha: 0.8) : AppColors.textMuted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 16),
+                    ],
 
                     // ── Reason Picker ─────────────────
                     const SectionLabel('ALASAN IZIN'),

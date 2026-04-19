@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 
 class FaceRegisterScreen extends StatefulWidget {
   const FaceRegisterScreen({super.key});
@@ -19,6 +20,10 @@ class _FaceRegisterScreenState extends State<FaceRegisterScreen>
   bool _isRegistering = false;
   bool _permissionDenied = false;
   ApiResult? _result;
+
+  // Screen flash state
+  bool _isFlashOn = false;
+  double? _originalBrightness;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnim;
@@ -124,11 +129,40 @@ class _FaceRegisterScreenState extends State<FaceRegisterScreen>
 
   @override
   void dispose() {
+    _restoreBrightness();
     _cameraController?.dispose();
     _pulseController.dispose();
     _scanController.dispose();
     _rotateController.dispose();
     super.dispose();
+  }
+
+  Future<void> _toggleFlash() async {
+    if (_isFlashOn) {
+      await _restoreBrightness();
+      setState(() => _isFlashOn = false);
+    } else {
+      await _enableFlash();
+      setState(() => _isFlashOn = true);
+    }
+  }
+
+  Future<void> _enableFlash() async {
+    try {
+      _originalBrightness ??= await ScreenBrightness.instance.application;
+      await ScreenBrightness.instance.setApplicationScreenBrightness(1.0);
+    } catch (_) {}
+  }
+
+  Future<void> _restoreBrightness() async {
+    try {
+      if (_originalBrightness != null) {
+        await ScreenBrightness.instance.setApplicationScreenBrightness(_originalBrightness!);
+        _originalBrightness = null;
+      } else {
+        await ScreenBrightness.instance.resetApplicationScreenBrightness();
+      }
+    } catch (_) {}
   }
 
   @override
@@ -170,12 +204,24 @@ class _FaceRegisterScreenState extends State<FaceRegisterScreen>
           ),
         ),
 
-        // Dark vignette overlay with face cutout
-        Positioned.fill(
-          child: CustomPaint(
-            painter: _FaceOverlayPainter(),
+        // Dark vignette overlay with face cutout (only when flash is OFF)
+        if (!_isFlashOn)
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _FaceOverlayPainter(),
+            ),
           ),
-        ),
+
+        // Screen flash overlay
+        if (_isFlashOn)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _FlashOverlayPainter(),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
 
         // Top bar
         Positioned(
@@ -214,7 +260,24 @@ class _FaceRegisterScreenState extends State<FaceRegisterScreen>
                     letterSpacing: -0.2,
                   ),
                 ),
-                const SizedBox(width: 38),
+                GestureDetector(
+                  onTap: _toggleFlash,
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: _isFlashOn
+                          ? Colors.amber.withValues(alpha: 0.3)
+                          : Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      _isFlashOn ? Icons.flashlight_on : Icons.flashlight_off,
+                      size: 20,
+                      color: _isFlashOn ? Colors.amber : AppColors.white,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -636,4 +699,29 @@ class _RotatingArcPainter extends CustomPainter {
   bool shouldRepaint(covariant _RotatingArcPainter oldDelegate) =>
       oldDelegate.progress != progress ||
       oldDelegate.isScanning != isScanning;
+}
+
+class _FlashOverlayPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white;
+    final path = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final cutoutRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(size.width / 2, size.height * 0.45),
+        width: size.width - 40,
+        height: size.height * 0.55,
+      ),
+      const Radius.circular(80),
+    );
+
+    final cutoutPath = Path()..addRRect(cutoutRect);
+    final combinedPath = Path.combine(PathOperation.difference, path, cutoutPath);
+    
+    canvas.drawPath(combinedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

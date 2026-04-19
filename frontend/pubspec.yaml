@@ -22,6 +22,7 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   provider: ^6.1.2
   url_launcher: ^6.3.2
+  screen_brightness: ^2.1.7
 
 dev_dependencies:
   flutter_test:

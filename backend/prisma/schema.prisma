@@ -76,6 +76,7 @@ model Course {
   schedules      Schedule[]
   attendances    Attendance[]
   enrollments    Enrollment[]
+  leaveRequests  LeaveRequest[]
 }
 
 model Enrollment {
@@ -124,6 +125,8 @@ model LeaveRequest {
   date           DateTime       
   studentId      String
   student        Student        @relation(fields: [studentId], references: [id])
+  courseId       String
+  course         Course         @relation(fields: [courseId], references: [id])
   reviewedById   String?
   reviewedBy     Lecturer?      @relation(fields: [reviewedById], references: [id])
   reviewedAt     DateTime?

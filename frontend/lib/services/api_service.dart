@@ -263,6 +263,7 @@ class ApiService {
     required double latitude,
     required double longitude,
     List<String> imagePaths = const [],
+    String? clientTime,
   }) async {
     try {
       final token = await getToken();
@@ -276,6 +277,9 @@ class ApiService {
       request.fields['status'] = status;
       request.fields['latitude'] = latitude.toString();
       request.fields['longitude'] = longitude.toString();
+      if (clientTime != null) {
+        request.fields['clientTime'] = clientTime;
+      }
 
       // Add face images for liveness detection (multi-frame)
       for (final path in imagePaths) {
@@ -342,9 +346,11 @@ class ApiService {
   // ─── Leave Requests ──────────────────────────────────────────────
 
   static Future<bool> submitLeaveRequest({
+    required List<String> courseIds,
     required String leaveType,
     required String date,
     required String reason,
+    required String clientTime,
     PlatformFile? document,
   }) async {
     try {
@@ -352,8 +358,10 @@ class ApiService {
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/leave-requests'));
       if (token != null) request.headers['Authorization'] = 'Bearer $token';
 
+      request.fields['courseIds'] = jsonEncode(courseIds);
       request.fields['reason'] = leaveType;
       request.fields['date'] = date;
+      request.fields['clientTime'] = clientTime;
       request.fields['description'] = reason;
 
       if (document != null) {

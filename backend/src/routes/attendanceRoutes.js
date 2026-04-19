@@ -103,7 +103,8 @@ router.post('/', authMiddleware, studentMiddleware, upload.array('faceImages', 5
         const EARLY_OPEN_MINUTES = 0; // Exactly at start time
         const LATE_CLOSE_MINUTES = 15;
         const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-        const todayDay = dayNames[new Date().getDay()];
+        const clientNow = req.body.clientTime ? new Date(req.body.clientTime) : new Date();
+        const todayDay = dayNames[clientNow.getDay()];
 
         const schedule = await prisma.schedule.findFirst({
             where: { courseId, dayOfWeek: todayDay },
@@ -116,8 +117,7 @@ router.post('/', authMiddleware, studentMiddleware, upload.array('faceImages', 5
 
         // Parse schedule startTime (format "HH:mm") and compare with current time
         const [startHour, startMin] = schedule.startTime.split(':').map(Number);
-        const now = new Date();
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const nowMinutes = clientNow.getHours() * 60 + clientNow.getMinutes();
         const classStartMinutes = startHour * 60 + startMin;
         const diffMinutes = nowMinutes - classStartMinutes;
 

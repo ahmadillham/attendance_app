@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart' as perm;
 import 'package:provider/provider.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 import '../constants/theme.dart';
 import '../constants/mock_data.dart';
 import '../services/api_service.dart';
@@ -40,6 +41,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
   Map<String, dynamic>? _result;
   bool _showResult = false;
   ScheduleItem? _activeSchedule; // dynamically resolved from today's schedule
+
+  // Screen flash state
+  bool _isFlashOn = false;
+  double? _originalBrightness;
 
   // Liveness challenge state
   String? _livenessPrompt;
@@ -85,10 +90,39 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
 
   @override
   void dispose() {
+    _restoreBrightness();
     _cameraController?.dispose();
     _scanAnimController.dispose();
     _pulseAnimController.dispose();
     super.dispose();
+  }
+
+  Future<void> _toggleFlash() async {
+    if (_isFlashOn) {
+      await _restoreBrightness();
+      setState(() => _isFlashOn = false);
+    } else {
+      await _enableFlash();
+      setState(() => _isFlashOn = true);
+    }
+  }
+
+  Future<void> _enableFlash() async {
+    try {
+      _originalBrightness ??= await ScreenBrightness.instance.application;
+      await ScreenBrightness.instance.setApplicationScreenBrightness(1.0);
+    } catch (_) {}
+  }
+
+  Future<void> _restoreBrightness() async {
+    try {
+      if (_originalBrightness != null) {
+        await ScreenBrightness.instance.setApplicationScreenBrightness(_originalBrightness!);
+        _originalBrightness = null;
+      } else {
+        await ScreenBrightness.instance.resetApplicationScreenBrightness();
+      }
+    } catch (_) {}
   }
 
   Future<void> _initCamera() async {
@@ -395,6 +429,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
             // Camera preview
             Positioned.fill(child: CameraPreview(controller: _cameraController!)),
 
+            // Screen flash overlay
+            if (_isFlashOn)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _FlashOverlayPainter(),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+
             // Overlay
             Positioned.fill(
               child: Column(
@@ -433,7 +478,24 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                             letterSpacing: -0.2,
                           ),
                         ),
-                        const SizedBox(width: 40),
+                        GestureDetector(
+                          onTap: _toggleFlash,
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: _isFlashOn
+                                  ? Colors.amber.withValues(alpha: 0.3)
+                                  : Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              _isFlashOn ? Icons.flashlight_on : Icons.flashlight_off,
+                              size: 20,
+                              color: _isFlashOn ? Colors.amber : AppColors.white,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -827,4 +889,33 @@ class CameraPreview extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FlashOverlayPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white;
+    final path = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    // Define the cutout region (center of the screen)
+    // The face frame is 250x250, so we make the cutout slightly larger to show the camera
+    final cutoutRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(size.width / 2, size.height * 0.45),
+        width: size.width - 40,
+        height: size.height * 0.55,
+      ),
+      const Radius.circular(80),
+    );
+
+    final cutoutPath = Path()..addRRect(cutoutRect);
+    
+    // Combine paths: everything minus the cutout
+    final combinedPath = Path.combine(PathOperation.difference, path, cutoutPath);
+    
+    canvas.drawPath(combinedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

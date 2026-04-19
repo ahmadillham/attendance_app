@@ -19,27 +19,35 @@ router.post('/', authMiddleware, studentMiddleware, upload.single('document'), a
             return res.status(400).json({ message: error.details[0].message });
         }
 
+        if (!req.body.courseIds) {
+            return res.status(400).json({ message: "Pilih setidaknya satu mata kuliah." });
+        }
+
         const { reason, description, date } = req.body;
         const studentId = req.user.id;
         const leaveDate = new Date(date);
+        
+        let courseIds = [];
+        try {
+            // parse JSON if array, otherwise split by comma
+            courseIds = JSON.parse(req.body.courseIds);
+        } catch (e) {
+            courseIds = req.body.courseIds.split(',').map(s => s.trim()).filter(Boolean);
+        }
 
-        // ── Time cutoff: leave requests for today must be submitted before all classes start ──
+        if (courseIds.length === 0) {
+            return res.status(400).json({ message: "Mata kuliah tidak valid." });
+        }
+
         const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         const leaveDayName = dayNames[leaveDate.getDay()];
         const now = new Date();
 
-        // Check if the leave date is today (same calendar day)
         const isToday = leaveDate.getFullYear() === now.getFullYear()
             && leaveDate.getMonth() === now.getMonth()
             && leaveDate.getDate() === now.getDate();
 
-        // Look up the student's enrolled courses that have schedules on this day
-        const enrollments = await prisma.enrollment.findMany({
-            where: { studentId },
-            select: { courseId: true },
-        });
-        const courseIds = enrollments.map(e => e.courseId);
-
+        // Validate schedules for the selected courses
         const schedules = await prisma.schedule.findMany({
             where: {
                 courseId: { in: courseIds },
@@ -47,44 +55,47 @@ router.post('/', authMiddleware, studentMiddleware, upload.single('document'), a
             },
         });
 
-        if (schedules.length === 0) {
-            return res.status(403).json({
-                message: `Tidak ada jadwal kuliah pada hari ${leaveDayName}. Pengajuan izin ditolak.`,
-            });
+        if (schedules.length !== courseIds.length) {
+             return res.status(403).json({
+                 message: `Beberapa mata kuliah yang dipilih tidak ada jadwal di hari ${leaveDayName}.`,
+             });
         }
 
         if (isToday) {
             const nowMinutes = now.getHours() * 60 + now.getMinutes();
-            // Find the earliest (first) class start time
-            const firstClassMinutes = Math.min(...schedules.map(s => {
-                const [h, m] = s.startTime.split(':').map(Number);
-                return h * 60 + m;
-            }));
-            // Leave must be submitted before the first class starts
-            if (nowMinutes >= firstClassMinutes) {
-                const fmtTime = `${String(Math.floor(firstClassMinutes / 60)).padStart(2, '0')}:${String(firstClassMinutes % 60).padStart(2, '0')}`;
-                return res.status(403).json({
-                    message: `Batas pengajuan izin adalah sebelum pukul ${fmtTime} (kelas pertama hari ini). Pengajuan izin tidak dapat dilakukan setelah kelas pertama dimulai.`,
-                });
+            for (const courseId of courseIds) {
+                const schedule = schedules.find(s => s.courseId === courseId);
+                const [h, m] = schedule.startTime.split(':').map(Number);
+                const classStartMinutes = h * 60 + m;
+                
+                if (nowMinutes >= classStartMinutes) {
+                    const fmtTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                    return res.status(403).json({
+                        message: `Batas pengajuan izin untuk mata kuliah ini adalah pukul ${fmtTime}. Pengajuan izin tidak dapat dilakukan setelah kelas dimulai.`,
+                    });
+                }
             }
         }
 
-        // Check if user attached a document
         let evidenceUrl = null;
         if (req.file) {
             evidenceUrl = `/uploads/documents/${req.file.filename}`;
         }
 
-        const leaveRequest = await prisma.leaveRequest.create({
-            data: {
-                reason,
-                description,
-                evidenceUrl,
-                date: leaveDate,
-                studentId
-            }
+        const leaveRequestsData = courseIds.map(courseId => ({
+            reason,
+            description,
+            evidenceUrl,
+            date: leaveDate,
+            studentId,
+            courseId,
+        }));
+
+        await prisma.leaveRequest.createMany({
+            data: leaveRequestsData
         });
-        res.status(201).json(leaveRequest);
+
+        res.status(201).json({ message: "Pengajuan izin berhasil dibuat untuk mata kuliah terpilih." });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -96,6 +107,7 @@ router.get('/', authMiddleware, studentMiddleware, async (req, res) => {
         const studentId = req.user.id;
         const leaveRequests = await prisma.leaveRequest.findMany({
             where: { studentId },
+            include: { course: { select: { name: true, code: true } } },
             orderBy: { createdAt: 'desc' }
         });
         res.json(leaveRequests);

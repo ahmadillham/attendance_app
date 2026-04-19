@@ -37,7 +37,20 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
 
           final profile = provider.profile;
           if (profile == null) {
-            return const Center(child: Text('Gagal memuat profil'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Gagal memuat profil atau sesi telah berakhir.'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _handleLogout,
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.white),
+                    child: const Text('Logout'),
+                  ),
+                ],
+              ),
+            );
           }
 
           final name = profile.name;
