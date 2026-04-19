@@ -321,7 +321,9 @@ class ApiService {
             if (!courseMap.containsKey(courseId)) {
               courseMap[courseId] = CourseAttendance(
                 subject: courseData['name'] ?? 'Unknown Course',
-                lecturer: courseData['lecturer'] ?? 'Unknown Lecturer',
+                lecturer: (courseData['lecturer'] is Map) 
+                    ? (courseData['lecturer']['name'] ?? 'Unknown Lecturer') 
+                    : (courseData['lecturer'] ?? 'Unknown Lecturer'),
                 totalMeetings: courseData['totalMeetings'] ?? 14,
                 records: [],
               );
@@ -497,8 +499,9 @@ class ApiService {
 
   /// Get lecturer dashboard data (today's classes + stats)
   static Future<Map<String, dynamic>> getLecturerDashboard() async {
+    final dateStr = AppTime.now().toIso8601String();
     return _get<Map<String, dynamic>>(
-      '/lecturer/dashboard',
+      '/lecturer/dashboard?date=$dateStr',
       parser: (json) => json as Map<String, dynamic>,
     );
   }

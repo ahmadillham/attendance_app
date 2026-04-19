@@ -121,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       if (mounted) {
         _showAlert(
           'Login Diperlukan',
-          'Silakan masuk dengan NIM dan password terlebih dahulu. Setelah itu, Anda bisa menggunakan ${_getBiometricLabel()} untuk login berikutnya.',
+          'Silakan masuk dengan NIM/NIDN dan password terlebih dahulu. Setelah itu, Anda bisa menggunakan ${_getBiometricLabel()} untuk login berikutnya.',
         );
       }
       return;
@@ -149,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       } else {
         _showAlert(
           'Sesi Habis',
-          'Gagal masuk otomatis. Silakan masuk dengan NIM dan password.',
+          'Gagal masuk otomatis. Silakan masuk dengan NIM/NIDN dan password.',
         );
       }
     } catch (e) {
@@ -167,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final password = _passwordController.text.trim();
 
     if (nim.isEmpty) {
-      _showAlert('Peringatan', 'Masukkan NIM Anda.');
+      _showAlert('Peringatan', 'Masukkan NIM / NIDN Anda.');
       return;
     }
     if (password.isEmpty) {
@@ -237,203 +237,230 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   void _showTimeMockerModal() {
     DateTime mockDate = AppTime.isMocked ? AppTime.mockValue! : DateTime.now();
     TimeOfDay mockTime = TimeOfDay(hour: mockDate.hour, minute: mockDate.minute);
+    const dayLabels = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const monthLabels = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
+        builder: (ctx, setSheetState) {
+          final dateLabel = '${dayLabels[mockDate.weekday % 7]}, ${mockDate.day} ${monthLabels[mockDate.month - 1]} ${mockDate.year}';
+          final timeLabel = '${mockTime.hour.toString().padLeft(2, '0')}:${mockTime.minute.toString().padLeft(2, '0')}';
+
+          return Container(
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
             ),
-          ),
-          padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(ctx).viewInsets.bottom + 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Sheet bar
-              Container(
-                width: 36, height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
+            padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(ctx).viewInsets.bottom + 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Drag handle
+                Container(
+                  width: 32, height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              Row(
-                children: [
+
+                // Title row
+                Row(
+                  children: [
+                    const Icon(Icons.schedule, size: 20, color: AppColors.textSecondary),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Time Mocker',
+                      style: TextStyle(
+                        fontSize: AppFonts.h3,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (AppTime.isMocked)
+                      GestureDetector(
+                        onTap: () {
+                          AppTime.clearMock();
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Waktu dikembalikan ke sistem'),
+                              backgroundColor: AppColors.primary,
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'Reset',
+                            style: TextStyle(
+                              fontSize: AppFonts.small,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+
+                // Status indicator
+                if (AppTime.isMocked) ...[
+                  const SizedBox(height: 12),
                   Container(
-                    width: 36, height: 36,
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.danger.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.science_outlined, size: 18, color: AppColors.danger),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Time Mocker',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w400,
-                      color: AppColors.textPrimary,
+                    child: Text(
+                      'Mock aktif: ${_fmtDt(AppTime.mockValue!)}',
+                      style: const TextStyle(
+                        fontSize: AppFonts.small,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  if (AppTime.isMocked)
-                    TextButton(
-                      onPressed: () {
-                        AppTime.clearMock();
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('⏱ Time mock cleared — using real system time'),
-                            backgroundColor: AppColors.success,
-                          ),
-                        );
-                      },
-                      child: const Text('Reset', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w400)),
-                    ),
                 ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                AppTime.isMocked
-                    ? 'Mock aktif: ${_fmtDt(AppTime.mockValue!)}'
-                    : 'Waktu sistem asli',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTime.isMocked ? AppColors.danger : AppColors.textMuted,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-              const SizedBox(height: 20),
 
-              // Date picker
-              GestureDetector(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: ctx,
-                    initialDate: mockDate,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2030),
-                  );
-                  if (picked != null) {
-                    setSheetState(() => mockDate = DateTime(
-                      picked.year, picked.month, picked.day,
-                      mockTime.hour, mockTime.minute,
-                    ));
-                  }
-                },
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today, size: 18, color: AppColors.primary),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Tanggal', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                          Text(
-                            '${mockDate.day.toString().padLeft(2, '0')}/${mockDate.month.toString().padLeft(2, '0')}/${mockDate.year}',
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+                const SizedBox(height: 20),
+
+                // Date & Time in a single row
+                Row(
+                  children: [
+                    // Date
+                    Expanded(
+                      flex: 3,
+                      child: GestureDetector(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: mockDate,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2030),
+                          );
+                          if (picked != null) {
+                            setSheetState(() => mockDate = DateTime(
+                              picked.year, picked.month, picked.day,
+                              mockTime.hour, mockTime.minute,
+                            ));
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.borderLight),
                           ),
-                        ],
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Tanggal', style: TextStyle(fontSize: AppFonts.small, color: AppColors.textMuted)),
+                              const SizedBox(height: 4),
+                              Text(
+                                dateLabel,
+                                style: const TextStyle(fontSize: AppFonts.caption, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
+                    ),
 
-              // Time picker
-              GestureDetector(
-                onTap: () async {
-                  final picked = await showTimePicker(
-                    context: ctx,
-                    initialTime: mockTime,
-                  );
-                  if (picked != null) {
-                    setSheetState(() {
-                      mockTime = picked;
-                      mockDate = DateTime(
+                    const SizedBox(width: 10),
+
+                    // Time
+                    Expanded(
+                      flex: 2,
+                      child: GestureDetector(
+                        onTap: () async {
+                          final picked = await showTimePicker(
+                            context: ctx,
+                            initialTime: mockTime,
+                          );
+                          if (picked != null) {
+                            setSheetState(() {
+                              mockTime = picked;
+                              mockDate = DateTime(
+                                mockDate.year, mockDate.month, mockDate.day,
+                                picked.hour, picked.minute,
+                              );
+                            });
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.borderLight),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Waktu', style: TextStyle(fontSize: AppFonts.small, color: AppColors.textMuted)),
+                              const SizedBox(height: 4),
+                              Text(
+                                timeLabel,
+                                style: const TextStyle(fontSize: AppFonts.caption, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // Apply button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final finalMock = DateTime(
                         mockDate.year, mockDate.month, mockDate.day,
-                        picked.hour, picked.minute,
+                        mockTime.hour, mockTime.minute,
                       );
-                    });
-                  }
-                },
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.access_time, size: 18, color: AppColors.primary),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Waktu', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                          Text(
-                            '${mockTime.hour.toString().padLeft(2, '0')}:${mockTime.minute.toString().padLeft(2, '0')}',
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
-                          ),
-                        ],
-                      ),
-                    ],
+                      AppTime.setMock(finalMock);
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Mock time: ${_fmtDt(finalMock)}'),
+                          backgroundColor: AppColors.primary,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                    ),
+                    child: const Text('Terapkan', style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w500)),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              // Save button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.save, size: 18),
-                  label: const Text('Simpan Mock Time', style: TextStyle(fontWeight: FontWeight.w400)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.danger,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    final finalMock = DateTime(
-                      mockDate.year, mockDate.month, mockDate.day,
-                      mockTime.hour, mockTime.minute,
-                    );
-                    AppTime.setMock(finalMock);
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('🕐 Mock time set: ${_fmtDt(finalMock)}'),
-                        backgroundColor: AppColors.danger,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -457,119 +484,81 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           value: SystemUiOverlayStyle.light.copyWith(
             statusBarColor: Colors.transparent,
           ),
-          child: Stack(
-            children: [
-              // Top decoration circles
-              Positioned(
-                top: -60,
-                right: -40,
-                child: Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.06),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 60,
-                left: -60,
-                child: Container(
-                  width: 160,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.04),
-                  ),
-                ),
-              ),
-
-              // Content
-              Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Logo & Title
-                      FadeTransition(
-                        opacity: _fadeAnim,
-                        child: SlideTransition(
-                          position: _slideAnim,
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 64,
-                                height: 64,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.school,
-                                  size: 32,
-                                  color: AppColors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'Absensi Kuliah',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w400,
-                                  color: AppColors.white,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Masuk dengan akun mahasiswa Anda',
-                                style: TextStyle(
-                                  fontSize: AppFonts.caption,
-                                  color: Colors.white.withValues(alpha: 0.65),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Form Card
-                      FadeTransition(
-                        opacity: _fadeAnim,
-                        child: SlideTransition(
-                          position: _slideAnim,
-                          child: Container(
-                            key: _formCardKey,
-                            padding: const EdgeInsets.all(24),
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Logo & Title
+                  FadeTransition(
+                    opacity: _fadeAnim,
+                    child: SlideTransition(
+                      position: _slideAnim,
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
                             decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(AppRadius.xl),
-                              boxShadow: AppShadows.medium,
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
                             ),
-                            child: Column(
+                            child: const Icon(
+                              Icons.school,
+                              size: 32,
+                              color: AppColors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Absensi Kuliah',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.white,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Masuk ke akun Anda',
+                            style: TextStyle(
+                              fontSize: AppFonts.body,
+                              color: Colors.white.withValues(alpha: 0.65),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  // Form Area (Card)
+                  FadeTransition(
+                    opacity: _fadeAnim,
+                    child: SlideTransition(
+                      position: _slideAnim,
+                      child: Container(
+                        key: _formCardKey,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.xl),
+                          boxShadow: AppShadows.medium,
+                        ),
+                        child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // NIM Input
-                                Text(
-                                  'NIM',
-                                  style: TextStyle(
-                                    fontSize: AppFonts.caption,
-                                    fontWeight: FontWeight.w400,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
+                                // NIM / NIDN Input
                                 _buildInputField(
                                   controller: _nimController,
-                                  icon: Icons.person_outline,
-                                  placeholder: 'Masukkan NIM',
+                                  placeholder: 'NIM / NIDN',
                                   isFocused: _nimFocused,
                                   onFocusChange: (f) => setState(() => _nimFocused = f),
                                   keyboardType: TextInputType.number,
@@ -579,19 +568,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 const SizedBox(height: 18),
 
                                 // Password Input
-                                Text(
-                                  'Password',
-                                  style: TextStyle(
-                                    fontSize: AppFonts.caption,
-                                    fontWeight: FontWeight.w400,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
                                 _buildInputField(
                                   controller: _passwordController,
-                                  icon: Icons.lock_outline,
-                                  placeholder: 'Masukkan password',
+                                  placeholder: 'Password',
                                   isFocused: _pwFocused,
                                   onFocusChange: (f) => setState(() => _pwFocused = f),
                                   isPassword: true,
@@ -649,24 +628,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 // Biometric Login
                                 if (_biometricAvailable) ...[
                                   const SizedBox(height: 20),
-                                  Row(
-                                    children: [
-                                      const Expanded(child: Divider(color: AppColors.border)),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                                        child: Text(
-                                          'atau',
-                                          style: TextStyle(
-                                            fontSize: AppFonts.caption,
-                                            color: AppColors.textMuted,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                        ),
-                                      ),
-                                      const Expanded(child: Divider(color: AppColors.border)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
                                   SizedBox(
                                     width: double.infinity,
                                     child: OutlinedButton(
@@ -723,6 +684,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       // Footer
                       Text(
                         '© 2026 Universitas Nahdlatul Ulama Sunan Giri',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: AppFonts.small,
                           color: Colors.white.withValues(alpha: 0.4),
@@ -732,16 +694,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
+        );
   }
 
   Widget _buildInputField({
     required TextEditingController controller,
-    required IconData icon,
     required String placeholder,
     required bool isFocused,
     required ValueChanged<bool> onFocusChange,
@@ -754,24 +713,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       onFocusChange: onFocusChange,
       child: Container(
         decoration: BoxDecoration(
-          color: isFocused ? AppColors.primarySurface : AppColors.background,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
-            color: isFocused ? AppColors.primaryLight : Colors.transparent,
-            width: 1.5,
+            color: AppColors.borderLight,
+            width: 1,
           ),
         ),
         child: Row(
           children: [
-            SizedBox(
-              width: 44,
-              height: 48,
-              child: Icon(
-                icon,
-                size: 18,
-                color: isFocused ? AppColors.primary : AppColors.textMuted,
-              ),
-            ),
             Expanded(
               child: TextField(
                 controller: controller,
@@ -787,7 +737,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   hintText: placeholder,
                   hintStyle: const TextStyle(color: AppColors.textMuted),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
               ),
             ),

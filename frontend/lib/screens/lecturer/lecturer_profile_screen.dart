@@ -125,6 +125,27 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
                           ),
                         ),
 
+                        const SectionLabel('MATA KULIAH YANG DIAMPU'),
+                        if (provider.isCoursesLoading)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        else if (provider.courses.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: Text(
+                                'Tidak ada mata kuliah',
+                                style: TextStyle(color: AppColors.textMuted),
+                              ),
+                            ),
+                          )
+                        else
+                          ...provider.courses.map((c) => _courseCard(c)),
+
                         const SectionLabel('PENGATURAN'),
                         // Change Password
                         _actionCard(
@@ -184,6 +205,79 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
                     fontWeight: FontWeight.w400,
                     color: AppColors.textPrimary,
                   ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _courseCard(Map<String, dynamic> course) {
+    final name = course['name'] ?? 'Unknown Course';
+    final code = course['code'] ?? '-';
+    final enrollments = course['enrollments'] as List? ?? [];
+    final studentCount = enrollments.length;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.card,
+        border: Border.all(color: AppColors.borderLight, width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: const Icon(Icons.book_outlined, color: AppColors.primary, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: AppFonts.body,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        code,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Icon(Icons.people_outline, size: 12, color: AppColors.textMuted),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$studentCount Mahasiswa',
+                      style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -394,21 +488,21 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar?'),
+        content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
               await ApiService.clearToken();
               if (mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (_) => false);
               }
             },
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
             child: const Text('Keluar'),
           ),
         ],

@@ -15,7 +15,8 @@ router.get('/dashboard', async (req, res) => {
     try {
         const lecturerId = req.user.id;
         const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-        const today = dayNames[new Date().getDay()];
+        const targetDate = req.query.date ? new Date(req.query.date) : new Date();
+        const today = dayNames[targetDate.getDay()];
 
         // Get all courses taught by this lecturer
         const courses = await prisma.course.findMany({
@@ -27,9 +28,9 @@ router.get('/dashboard', async (req, res) => {
         });
 
         // Get today's attendance counts per course
-        const startOfDay = new Date();
+        const startOfDay = new Date(targetDate);
         startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date();
+        const endOfDay = new Date(targetDate);
         endOfDay.setHours(23, 59, 59, 999);
 
         const todayCourses = [];

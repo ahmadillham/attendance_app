@@ -98,11 +98,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     // ── Quick Actions ──────────────────
                     // Compute attendance time-window eligibility
-                    // Window: 12 hours before class start → 15 minutes after class start
+                    // Window: exactly at class start → 15 minutes after class start
                     Builder(builder: (context) {
                       final now = AppTime.timeOfDay();
                       final nowMinutes = now.hour * 60 + now.minute;
-                      const earlyOpenMinutes = 12 * 60; // 12 hours
+                      const earlyOpenMinutes = 0; // Exactly at start time
                       const lateCloseMinutes = 15;
 
                       // Check if any class is within its attendance window
@@ -147,8 +147,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           }
                         }
                         if (nearestClose != null) {
-                          // The window will open earlyOpenMinutes before class start
-                          // but since earlyOpen is 12h, it's likely already open or will be "soon"
                           // Show the class start time as reference
                           final classStart = nearestClose - lateCloseMinutes;
                           final h = classStart ~/ 60;
@@ -240,36 +238,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       final todaySchedules = provider.dashboardData!.todaySchedules;
                       final hasClassesToday = todaySchedules.isNotEmpty;
 
-                      // Check if at least one class hasn't started yet (cutoff = class start time)
-                      bool hasUpcomingClass = false;
-                      String? nextClassTime;
+                      // Leave request cutoff: before the FIRST class of the day starts
+                      bool canSubmitLeave = false;
+                      String? firstClassTime;
                       if (hasClassesToday) {
                         final now = AppTime.timeOfDay();
                         final nowMinutes = now.hour * 60 + now.minute;
-                        for (final item in todaySchedules) {
-                          final startStr = item.time.split(' – ').first.trim();
-                          final parts = startStr.split(':');
-                          if (parts.length == 2) {
-                            final startMinutes = int.parse(parts[0]) * 60 + int.parse(parts[1]);
-                            if (startMinutes > nowMinutes) {
-                              hasUpcomingClass = true;
-                              nextClassTime ??= startStr;
-                              break;
-                            }
-                          }
+                        // Get the first class start time
+                        final firstItem = todaySchedules.first;
+                        final startStr = firstItem.time.split(' – ').first.trim();
+                        final parts = startStr.split(':');
+                        if (parts.length == 2) {
+                          final firstStartMinutes = int.parse(parts[0]) * 60 + int.parse(parts[1]);
+                          firstClassTime = startStr;
+                          canSubmitLeave = nowMinutes < firstStartMinutes;
                         }
                       }
 
-                      final bool canRequestLeave = hasClassesToday && hasUpcomingClass;
+                      final bool canRequestLeave = hasClassesToday && canSubmitLeave;
 
                       // Subtitle text
                       String subtitle;
                       if (!hasClassesToday) {
                         subtitle = 'Tidak ada kelas hari ini';
-                      } else if (!hasUpcomingClass) {
+                      } else if (!canSubmitLeave) {
                         subtitle = 'Batas waktu izin telah lewat';
                       } else {
-                        subtitle = 'Batas sebelum pukul $nextClassTime';
+                        subtitle = 'Batas sebelum pukul $firstClassTime';
                       }
 
                       return Opacity(

@@ -203,10 +203,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
       final todaySchedules = provider.dashboardData?.todaySchedules ?? [];
 
       // Find the class currently within its attendance window
-      // Window: 12 hours before class start → 15 minutes after class start
+      // Window: exactly at class start → 15 minutes after class start
       final now = AppTime.timeOfDay();
       final nowMinutes = now.hour * 60 + now.minute;
-      const earlyOpenMinutes = 12 * 60; // 12 hours
+      const earlyOpenMinutes = 0; // Exactly at start time
       const lateCloseMinutes = 15;
 
       for (final item in todaySchedules) {
@@ -230,12 +230,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
   }
 
   /// Check if the active schedule is within the attendance window right now.
-  /// Window: 12 hours before class start → 15 minutes after class start.
+  /// Window: exactly at class start → 15 minutes after class start.
   bool _isWithinAttendanceWindow() {
     if (_activeSchedule == null) return false;
     final now = AppTime.timeOfDay();
     final nowMinutes = now.hour * 60 + now.minute;
-    const earlyOpenMinutes = 12 * 60; // 12 hours
+    const earlyOpenMinutes = 0; // Exactly at start time
     const lateCloseMinutes = 15;
 
     final startStr = _activeSchedule!.time.split(' – ').first.trim();

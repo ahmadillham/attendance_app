@@ -319,17 +319,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   if (course.presentCount > 0)
                                     Expanded(
                                       flex: course.presentCount,
-                                      child: Container(color: AppColors.success),
+                                      child: Container(color: AppColors.primary),
                                     ),
                                   if (course.leaveCount > 0)
                                     Expanded(
                                       flex: course.leaveCount,
-                                      child: Container(color: AppColors.warning),
+                                      child: Container(color: AppColors.primary.withValues(alpha: 0.5)),
                                     ),
                                   if (course.absentCount > 0)
                                     Expanded(
                                       flex: course.absentCount,
-                                      child: Container(color: AppColors.danger),
+                                      child: Container(color: AppColors.primary.withValues(alpha: 0.2)),
                                     ),
                                 ],
                                 ),
@@ -339,11 +339,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               // Mini stats
                               Row(
                                 children: [
-                                  _miniStat(AppColors.success, 'Hadir ${course.presentCount}'),
+                                  _miniStat(AppColors.primary, 'Hadir ${course.presentCount}'),
                                   const SizedBox(width: 12),
-                                  _miniStat(AppColors.danger, 'Absen ${course.absentCount}'),
+                                  _miniStat(AppColors.primary.withValues(alpha: 0.5), 'Absen ${course.absentCount}'),
                                   const SizedBox(width: 12),
-                                  _miniStat(AppColors.warning, 'Izin ${course.leaveCount}'),
+                                  _miniStat(AppColors.primary.withValues(alpha: 0.2), 'Izin ${course.leaveCount}'),
                                   const Spacer(),
                                   const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
                                 ],

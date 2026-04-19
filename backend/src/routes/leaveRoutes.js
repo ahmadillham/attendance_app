@@ -55,14 +55,16 @@ router.post('/', authMiddleware, studentMiddleware, upload.single('document'), a
 
         if (isToday) {
             const nowMinutes = now.getHours() * 60 + now.getMinutes();
-            // Check if at least one class hasn't started yet
-            const hasUpcoming = schedules.some(s => {
+            // Find the earliest (first) class start time
+            const firstClassMinutes = Math.min(...schedules.map(s => {
                 const [h, m] = s.startTime.split(':').map(Number);
-                return (h * 60 + m) > nowMinutes;
-            });
-            if (!hasUpcoming) {
+                return h * 60 + m;
+            }));
+            // Leave must be submitted before the first class starts
+            if (nowMinutes >= firstClassMinutes) {
+                const fmtTime = `${String(Math.floor(firstClassMinutes / 60)).padStart(2, '0')}:${String(firstClassMinutes % 60).padStart(2, '0')}`;
                 return res.status(403).json({
-                    message: 'Semua kelas hari ini sudah dimulai. Pengajuan izin tidak dapat dilakukan setelah jam mulai kelas.',
+                    message: `Batas pengajuan izin adalah sebelum pukul ${fmtTime} (kelas pertama hari ini). Pengajuan izin tidak dapat dilakukan setelah kelas pertama dimulai.`,
                 });
             }
         }

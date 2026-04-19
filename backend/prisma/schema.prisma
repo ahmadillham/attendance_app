@@ -25,6 +25,7 @@ enum LeaveStatus {
 }
 
 enum DayOfWeek {
+  Minggu
   Senin
   Selasa
   Rabu

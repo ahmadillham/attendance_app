@@ -25,7 +25,9 @@ class ScheduleItem {
       subject: course['name'] ?? json['subject'] ?? 'Unknown',
       time: '${json['startTime'] ?? '??:??'} – ${json['endTime'] ?? '??:??'}',
       room: json['room'] ?? 'Unknown',
-      lecturer: course['lecturer'] ?? json['lecturer'] ?? 'Unknown',
+      lecturer: (course['lecturer'] is Map)
+          ? (course['lecturer']['name'] ?? 'Unknown')
+          : (course['lecturer'] ?? json['lecturer'] ?? 'Unknown'),
       status: 'upcoming',
       courseId: json['courseId']?.toString() ?? course['id']?.toString(),
     );

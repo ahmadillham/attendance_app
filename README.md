@@ -193,15 +193,12 @@ const adapter = new PrismaMariaDb({
 
 ### Frontend — URL Backend
 
-URL backend dapat dikonfigurasi **tanpa mengubah kode** menggunakan `--dart-define`:
+Secara default, aplikasi menggunakan `http://127.0.0.1:3000/api` sebagai URL backend.
+Untuk perangkat fisik Android, diperlukan konfigurasi `adb reverse` agar perangkat bisa mengakses localhost komputer.
+
+URL backend juga dapat diubah menggunakan `--dart-define`:
 
 ```bash
-# Development (default: 192.168.1.21)
-flutter run --dart-define=API_URL=http://192.168.1.x:3000/api
-
-# Emulator Android
-flutter run --dart-define=API_URL=http://10.0.2.2:3000/api
-
 # Produksi
 flutter build apk --dart-define=API_URL=https://api.yourdomain.com/api
 ```
@@ -210,7 +207,23 @@ flutter build apk --dart-define=API_URL=https://api.yourdomain.com/api
 
 ## Menjalankan Aplikasi
 
-### Backend
+### Cara Paling Cepat (Development)
+
+Kami telah menyediakan script `dev.sh` di root direktori untuk menjalankan seluruh environment (adb reverse, backend, dan frontend) dalam satu perintah:
+
+```bash
+# Pastikan HP Android tersambung dengan USB Debugging aktif
+./dev.sh
+```
+
+Script ini otomatis melakukan:
+1. `adb reverse tcp:3000 tcp:3000` (agar HP bisa akses localhost PC)
+2. Menjalankan backend Node.js (`npm run dev`)
+3. Menjalankan frontend Flutter (`flutter run`)
+
+### Cara Manual (Menjalankan Terpisah)
+
+#### Backend
 
 ```bash
 cd backend
@@ -233,11 +246,11 @@ curl http://localhost:3000/api/health
 ```bash
 cd frontend
 
-# Jalankan di perangkat fisik (pastikan seip WiFi sama dengan laptop)
-flutter run --dart-define=API_URL=http://192.168.1.21:3000/api
+# Pastikan sudah menjalankan adb reverse jika menggunakan perangkat fisik
+# adb reverse tcp:3000 tcp:3000
 
-# Jalankan di emulator
-flutter run --dart-define=API_URL=http://10.0.2.2:3000/api
+# Jalankan aplikasi (menggunakan 127.0.0.1 secara default)
+flutter run
 ```
 
 ### Akun Default (setelah seed)

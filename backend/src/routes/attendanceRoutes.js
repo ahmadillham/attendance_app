@@ -99,8 +99,8 @@ router.post('/', authMiddleware, studentMiddleware, upload.array('faceImages', 5
         }
 
         // Security 5: Time-window validation
-        // Window opens 12 hours before class start, closes 15 minutes after class start
-        const EARLY_OPEN_MINUTES = 12 * 60; // 12 hours = 720 minutes
+        // Window opens exactly at class start time, closes 15 minutes after class start
+        const EARLY_OPEN_MINUTES = 0; // Exactly at start time
         const LATE_CLOSE_MINUTES = 15;
         const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         const todayDay = dayNames[new Date().getDay()];
@@ -122,7 +122,7 @@ router.post('/', authMiddleware, studentMiddleware, upload.array('faceImages', 5
         const diffMinutes = nowMinutes - classStartMinutes;
 
         // diffMinutes < 0 means we're before class start, diffMinutes > 0 means after
-        // Allow: from 720 min before (diffMinutes >= -720) to 15 min after (diffMinutes <= 15)
+        // Allow: from exactly at class start (diffMinutes >= 0) to 15 min after (diffMinutes <= 15)
         if (diffMinutes < -EARLY_OPEN_MINUTES || diffMinutes > LATE_CLOSE_MINUTES) {
             const windowStartMin = classStartMinutes - EARLY_OPEN_MINUTES;
             const windowEndMin = classStartMinutes + LATE_CLOSE_MINUTES;
@@ -282,7 +282,11 @@ router.get('/history', authMiddleware, studentMiddleware, async (req, res) => {
         const studentId = req.user.id;
         const history = await prisma.attendance.findMany({
             where: { studentId },
-            include: { course: true },
+            include: { 
+                course: {
+                    include: { lecturer: true }
+                }
+            },
             orderBy: { date: 'desc' }
         });
         res.json(history);

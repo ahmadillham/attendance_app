@@ -59,33 +59,45 @@ async function main() {
   console.log(`✅ Profil Mahasiswa: ${student.name} (Sandi: Password123)`);
 
   // 4. Memasukkan / Memperbarui Akun Dosen
-  const lecturer = await prisma.lecturer.upsert({
-    where: { lecturerId: '198501012020' },
-    update: {
-      password: hashedPassword,
-    },
-    create: {
-      lecturerId: '198501012020',
-      name: 'Dr. Budi Santoso, M.Kom.',
-      email: 'budi.santoso@unuha.ac.id',
-      phone: '0813-3000-1234',
-      department: 'Teknik Informatika',
-      faculty: 'Fakultas Sains dan Teknologi',
-      password: hashedPassword,
-    }
-  });
+  const lecturersData = [
+    { id: '198501012001', name: 'Dr. Mivan Ariful Fathoni, M.Si' },
+    { id: '198501012002', name: 'Muhammad Jauhar Fikri, S.Kom., M.Kom' },
+    { id: '198501012003', name: 'Guruh Putro Digantoro, S.Kom., M.Kom' },
+    { id: '198501012004', name: 'Zakki Alawi, S.Kom., MM' },
+    { id: '198501012005', name: 'Dwi Issadari Hastuti, S.Pd., S.Kom., M.Kom' },
+    { id: '198501012006', name: 'Mula Agung Barata, S.ST., M.Kom' },
+    { id: '198501012007', name: 'Afnil Efan Pajri, S.Kom., M.I.Kom' },
+  ];
 
-  console.log(`✅ Profil Dosen: ${lecturer.name} (NIP: ${lecturer.lecturerId}, Sandi: Password123)`);
+  const lecturersMap = {};
+  for (const l of lecturersData) {
+    const emailPrefix = l.name.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
+    const lecturer = await prisma.lecturer.upsert({
+      where: { lecturerId: l.id },
+      update: { password: hashedPassword },
+      create: {
+        lecturerId: l.id,
+        name: l.name,
+        email: `${emailPrefix}@unuha.ac.id`,
+        phone: '0813-3000-1234',
+        department: 'Teknik Informatika',
+        faculty: 'Fakultas Sains dan Teknologi',
+        password: hashedPassword,
+      }
+    });
+    lecturersMap[l.name] = lecturer.id;
+  }
+  console.log(`✅ ${lecturersData.length} Profil Dosen Tersimpan`);
 
   // 5. Memasukkan Mata Kuliah (terhubung ke Lecturer)
   const coursesData = [
-    { id: 'cl_logmat',          code: 'CL01', name: 'Logika Matematika',                   lecturerId: lecturer.id },
-    { id: 'cl_adpl',            code: 'CL02', name: 'Analisis Dan Desain Perangkat Lunak', lecturerId: lecturer.id },
-    { id: 'cl_mikrokontroller', code: 'CL03', name: 'Pemrograman Mikrokontroller',         lecturerId: lecturer.id },
-    { id: 'cl_mobile',          code: 'CL04', name: 'Pemrograman Berbasis Mobile',         lecturerId: lecturer.id },
-    { id: 'cl_imk',             code: 'CL05', name: 'Interaksi Manusia & Komputer',        lecturerId: lecturer.id },
-    { id: 'cl_iot',             code: 'CL06', name: 'Internet Of Things',                  lecturerId: lecturer.id },
-    { id: 'cl_komparsis',       code: 'CL07', name: 'Komputasi Paralel Dan Terdistribusi', lecturerId: lecturer.id },
+    { id: 'cl_logmat',          code: 'CL01', name: 'Logika Matematika',                   lecturerId: lecturersMap['Dr. Mivan Ariful Fathoni, M.Si'] },
+    { id: 'cl_adpl',            code: 'CL02', name: 'Analisis Dan Desain Perangkat Lunak', lecturerId: lecturersMap['Muhammad Jauhar Fikri, S.Kom., M.Kom'] },
+    { id: 'cl_mikrokontroller', code: 'CL03', name: 'Pemrograman Mikrokontroller',         lecturerId: lecturersMap['Guruh Putro Digantoro, S.Kom., M.Kom'] },
+    { id: 'cl_mobile',          code: 'CL04', name: 'Pemrograman Berbasis Mobile',         lecturerId: lecturersMap['Zakki Alawi, S.Kom., MM'] },
+    { id: 'cl_imk',             code: 'CL05', name: 'Interaksi Manusia & Komputer',        lecturerId: lecturersMap['Dwi Issadari Hastuti, S.Pd., S.Kom., M.Kom'] },
+    { id: 'cl_iot',             code: 'CL06', name: 'Internet Of Things',                  lecturerId: lecturersMap['Mula Agung Barata, S.ST., M.Kom'] },
+    { id: 'cl_komparsis',       code: 'CL07', name: 'Komputasi Paralel Dan Terdistribusi', lecturerId: lecturersMap['Afnil Efan Pajri, S.Kom., M.I.Kom'] },
   ];
 
   const courses = [];
@@ -97,7 +109,7 @@ async function main() {
     });
     courses.push(course);
   }
-  console.log(`✅ ${courses.length} Mata Kuliah Tersimpan (diajar oleh ${lecturer.name})`);
+  console.log(`✅ ${courses.length} Mata Kuliah Tersimpan`);
 
   // 6. Enrollment — Mahasiswa mengambil semua MK
   await prisma.enrollment.deleteMany({ where: { studentId: student.id } });
