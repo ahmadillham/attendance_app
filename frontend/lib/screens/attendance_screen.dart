@@ -32,6 +32,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
   bool _locationPermissionDenied = false;
   bool _locationPermissionPermanent = false;
   bool _mockLocationDetected = false;
+  bool _locationError = false;
 
   double? _currentLat;
   double? _currentLng;
@@ -195,30 +196,43 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
         return;
       }
 
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
+      Position? pos = await Geolocator.getLastKnownPosition();
+      // If no last known position or it's older than 2 minutes, get a fresh one
+      if (pos == null || DateTime.now().difference(pos.timestamp).inMinutes > 2) {
+        pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 10),
+          ),
+        );
+      }
+
+      final Position currentPos = pos!;
 
       // GPS Spoofing Detection — reject mocked locations
-      if (pos.isMocked) {
+      if (currentPos.isMocked) {
         if (mounted) {
           setState(() => _mockLocationDetected = true);
         }
         return;
       }
 
-      final dist = _haversineDistance(pos.latitude, pos.longitude, Campus.latitude, Campus.longitude);
+      final dist = _haversineDistance(currentPos.latitude, currentPos.longitude, Campus.latitude, Campus.longitude);
       if (mounted) {
         setState(() {
-          _currentLat = pos.latitude;
-          _currentLng = pos.longitude;
+          _currentLat = currentPos.latitude;
+          _currentLng = currentPos.longitude;
           _distance = dist;
           _isInRange = dist <= Campus.allowedRadiusMeters;
           _mockLocationDetected = false;
+          _locationError = false;
         });
       }
     } catch (e) {
       debugPrint('Location error: $e');
+      if (mounted) {
+        setState(() => _locationError = true);
+      }
     }
   }
 
@@ -355,6 +369,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
         latitude: _currentLat ?? 0.0,
         longitude: _currentLng ?? 0.0,
         imagePaths: imagePaths,
+        clientTime: AppTime.now().toIso8601String(),
       );
 
       _scanAnimController.stop();
@@ -575,26 +590,34 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                         Container(
                           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                           decoration: BoxDecoration(
-                            color: _isInRange
-                                ? const Color(0x2614B8A6)
-                                : const Color(0x26F59E0B),
+                            color: _locationError
+                                ? const Color(0x26EF4444) // Red for error
+                                : _isInRange
+                                    ? const Color(0x2614B8A6)
+                                    : const Color(0x26F59E0B),
                             borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
                           child: Row(
                             children: [
                               Icon(
-                                _isInRange ? Icons.check_circle : Icons.error,
+                                _locationError
+                                    ? Icons.location_off
+                                    : _isInRange ? Icons.check_circle : Icons.error,
                                 size: 18,
-                                color: _isInRange ? const Color(0xFF14B8A6) : const Color(0xFFF59E0B),
+                                color: _locationError
+                                    ? const Color(0xFFEF4444)
+                                    : _isInRange ? const Color(0xFF14B8A6) : const Color(0xFFF59E0B),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  _distance != null
-                                      ? _isInRange
-                                          ? 'Dalam jangkauan (${_distance!.round()}m)'
-                                          : 'Di luar jangkauan (${_distance!.round()}m)'
-                                      : 'Mengambil lokasi…',
+                                  _locationError
+                                      ? 'Gagal mendapat lokasi (Timeout)'
+                                      : _distance != null
+                                          ? _isInRange
+                                              ? 'Dalam jangkauan (${_distance!.round()}m)'
+                                              : 'Di luar jangkauan (${_distance!.round()}m)'
+                                          : 'Mengambil lokasi…',
                                   style: const TextStyle(
                                     fontSize: AppFonts.caption,
                                     color: AppColors.white,
@@ -609,8 +632,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
 
                         // Capture button
                         Builder(builder: (context) {
-                          final windowOpen = _isWithinAttendanceWindow();
-                          final bool buttonEnabled = windowOpen && !_isScanning;
+                          final bool windowOpen = _isWithinAttendanceWindow();
+                          final bool hasAttended = _activeSchedule?.status == 'attended';
+                          final bool buttonEnabled = windowOpen && !_isScanning && !hasAttended;
 
                           return AnimatedBuilder(
                             animation: _pulseAnim,
@@ -652,12 +676,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                                       : Row(
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            Icon(windowOpen ? Icons.face : Icons.lock_clock, size: 22),
+                                            Icon(hasAttended ? Icons.check_circle : windowOpen ? Icons.face : Icons.lock_clock, size: 22),
                                             const SizedBox(width: 10),
                                             Text(
-                                              windowOpen
-                                                  ? 'Verifikasi Sekarang'
-                                                  : 'Di Luar Waktu Absensi',
+                                              hasAttended 
+                                                  ? 'Sudah Absen'
+                                                  : windowOpen
+                                                      ? 'Verifikasi Sekarang'
+                                                      : 'Di Luar Waktu Absensi',
                                               style: const TextStyle(
                                                 fontSize: AppFonts.body,
                                                 fontWeight: FontWeight.w400,

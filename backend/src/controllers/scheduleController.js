@@ -29,7 +29,22 @@ const getSchedules = async (req, res) => {
             orderBy: { startTime: 'asc' },
         });
 
-        res.json(schedules);
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+        const todaysAttendances = await prisma.attendance.findMany({
+            where: {
+                studentId,
+                date: { gte: twelveHoursAgo }
+            },
+            select: { courseId: true }
+        });
+        const attendedCourseIds = new Set(todaysAttendances.map(a => a.courseId));
+
+        const schedulesWithStatus = schedules.map(s => ({
+            ...s,
+            hasAttended: attendedCourseIds.has(s.courseId)
+        }));
+
+        res.json(schedulesWithStatus);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

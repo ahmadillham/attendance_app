@@ -28,7 +28,7 @@ class ScheduleItem {
       lecturer: (course['lecturer'] is Map)
           ? (course['lecturer']['name'] ?? 'Unknown')
           : (course['lecturer'] ?? json['lecturer'] ?? 'Unknown'),
-      status: 'upcoming',
+      status: json['hasAttended'] == true ? 'attended' : 'upcoming',
       courseId: json['courseId']?.toString() ?? course['id']?.toString(),
     );
   }

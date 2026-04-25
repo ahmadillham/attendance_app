@@ -19,8 +19,8 @@ const haversineDistance = (lat1, lon1, lat2, lon2) => {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-const CAMPUS_LAT = -7.167311;
-const CAMPUS_LNG = 111.892951;
+const CAMPUS_LAT = -7.160460;
+const CAMPUS_LNG = 111.853767;
 const ALLOWED_RADIUS = 200;
 
 // Minimum landmark movement (Euclidean pixel distance) required between
@@ -134,10 +134,11 @@ router.post('/', authMiddleware, studentMiddleware, upload.array('faceImages', 5
 
         // Auto-calculate meeting count if not provided
         if (!meetingCount) {
-            const previousAttendances = await prisma.attendance.count({
-                where: { studentId, courseId }
+            const lastAttendance = await prisma.attendance.findFirst({
+                where: { studentId, courseId },
+                orderBy: { meetingCount: 'desc' }
             });
-            meetingCount = previousAttendances + 1;
+            meetingCount = lastAttendance ? lastAttendance.meetingCount + 1 : 1;
         }
 
         // Security 1: Biometric Face Validation
@@ -165,14 +166,14 @@ router.post('/', authMiddleware, studentMiddleware, upload.array('faceImages', 5
             const incomingDescriptor = await extractDescriptor(primaryFile.path);
             if (!incomingDescriptor) {
                 return res.status(400).json({
-                    message: 'Wajah tidak terdeteksi dalam foto. Pastikan wajah terlihat jelas dan pencahayaan cukup.'
+                    message: 'Wajah tidak terdeteksi.'
                 });
             }
 
             const faceResult = verifyFace(storedDescriptor, incomingDescriptor);
             if (!faceResult.matched) {
                 return res.status(400).json({
-                    message: `Akses ditolak: Wajah tidak cocok (similarity: ${faceResult.similarity}). Coba lagi dengan pencahayaan lebih baik.`,
+                    message: 'Wajah tidak cocok dengan data sistem.',
                 });
             }
 
@@ -185,7 +186,7 @@ router.post('/', authMiddleware, studentMiddleware, upload.array('faceImages', 5
 
                 if (!firstLandmarks || !lastLandmarks) {
                     return res.status(400).json({
-                        message: 'Deteksi liveness gagal: Wajah tidak terdeteksi di salah satu frame. Pastikan wajah tetap terlihat selama verifikasi.',
+                        message: 'Wajah tidak terdeteksi saat pengecekan gerakan.',
                     });
                 }
 
@@ -202,7 +203,7 @@ router.post('/', authMiddleware, studentMiddleware, upload.array('faceImages', 5
 
                 if (movement < LIVENESS_MOVEMENT_THRESHOLD) {
                     return res.status(400).json({
-                        message: 'Deteksi liveness gagal: Tidak terdeteksi gerakan wajah. Pastikan Anda mengikuti instruksi (kedipkan mata / tolehkan kepala).',
+                        message: 'Gerakan wajah tidak terdeteksi.',
                     });
                 }
 
@@ -213,7 +214,7 @@ router.post('/', authMiddleware, studentMiddleware, upload.array('faceImages', 5
                     const frameResult = verifyFace(storedDescriptor, frameDescriptor);
                     if (!frameResult.matched) {
                         return res.status(400).json({
-                            message: `Deteksi liveness gagal: Wajah pada frame ${i + 1} tidak cocok dengan data biometrik Anda.`,
+                            message: 'Wajah tidak cocok saat pengecekan gerakan.',
                         });
                     }
                 }
@@ -239,15 +240,20 @@ router.post('/', authMiddleware, studentMiddleware, upload.array('faceImages', 5
         // Security 2: Backend Geofencing Validation
         const distance = haversineDistance(latitude, longitude, CAMPUS_LAT, CAMPUS_LNG);
         if (distance > ALLOWED_RADIUS) {
-            return res.status(403).json({ message: `Akses ditolak: Anda berada ${(distance).toFixed(1)} meter dari batas kampus. Radius maksimal ${ALLOWED_RADIUS}m.` });
+            return res.status(403).json({ message: 'Anda berada di luar area kampus.' });
         }
 
-        // Security 3: Check for duplicate attendance
-        const existing = await prisma.attendance.findFirst({
-            where: { studentId, courseId, meetingCount },
+        // Security 3: Check for duplicate attendance today (within last 12 hours)
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+        const existingToday = await prisma.attendance.findFirst({
+            where: { 
+                studentId, 
+                courseId,
+                date: { gte: twelveHoursAgo }
+            },
         });
-        if (existing) {
-            return res.status(409).json({ message: `Absensi pertemuan ke-${meetingCount} untuk mata kuliah ini sudah tercatat.` });
+        if (existingToday) {
+            return res.status(409).json({ message: `Anda sudah absen untuk mata kuliah ini hari ini.` });
         }
 
         try {

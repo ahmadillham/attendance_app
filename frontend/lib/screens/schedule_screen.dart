@@ -221,30 +221,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                       child: Row(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          // Timeline bar
-                                          SizedBox(
-                                            width: 24,
-                                            child: Column(
-                                              children: [
-                                                const SizedBox(height: 6),
-                                                Container(
-                                                  width: 10,
-                                                  height: 10,
-                                                  decoration: BoxDecoration(
-                                                    color: AppColors.textMuted,
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                ),
-                                                if (index < daySchedule.length - 1)
-                                                  Container(
-                                                    width: 2,
-                                                    height: 80,
-                                                    margin: const EdgeInsets.only(top: 4),
-                                                    color: AppColors.border,
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
                                           // Card content
                                           Expanded(
                                             child: Container(

@@ -107,6 +107,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       // Check if any class is within its attendance window
                       bool isWindowOpen = false;
+                      bool isAttended = false;
                       String? windowCloseInfo; // when the current open window closes
                       String? nextWindowInfo; // when the next window opens
 
@@ -121,6 +122,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           // Allow: from earlyOpenMinutes before to lateCloseMinutes after
                           if (diff >= -earlyOpenMinutes && diff <= lateCloseMinutes) {
                             isWindowOpen = true;
+                            if (item.status == 'attended') isAttended = true;
+                            
                             final closeMin = startMinutes + lateCloseMinutes;
                             final h = closeMin ~/ 60;
                             final m = closeMin % 60;
@@ -155,7 +158,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         }
                       }
 
-                      final bool canAttend = isWindowOpen;
+                      final bool canAttend = isWindowOpen && !isAttended;
 
                       return Opacity(
                         opacity: canAttend ? 1.0 : 0.5,
@@ -182,7 +185,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Icon(
-                                        canAttend ? Icons.face : Icons.lock_clock,
+                                        isAttended ? Icons.check_circle : canAttend ? Icons.face : Icons.lock_clock,
                                         size: 22,
                                         color: AppColors.white,
                                       ),
@@ -201,15 +204,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             ),
                                           ),
                                           Text(
-                                            canAttend
-                                                ? windowCloseInfo != null
-                                                    ? 'Batas absen sampai $windowCloseInfo'
-                                                    : 'Wajah & Lokasi'
-                                                : nextWindowInfo != null
-                                                    ? 'Kelas berikutnya pukul $nextWindowInfo'
-                                                    : todaySchedules.isEmpty
-                                                        ? 'Tidak ada kelas hari ini'
-                                                        : 'Semua jendela absensi telah ditutup',
+                                            isAttended
+                                                ? 'Sudah absen untuk kelas ini'
+                                                : canAttend
+                                                    ? windowCloseInfo != null
+                                                        ? 'Batas absen sampai $windowCloseInfo'
+                                                        : 'Wajah & Lokasi'
+                                                    : nextWindowInfo != null
+                                                        ? 'Kelas berikutnya pukul $nextWindowInfo'
+                                                        : todaySchedules.isEmpty
+                                                            ? 'Tidak ada kelas hari ini'
+                                                            : 'Semua jendela absensi telah ditutup',
                                             style: TextStyle(
                                               fontSize: AppFonts.small,
                                               color: Colors.white.withValues(alpha: 0.9),
@@ -349,59 +354,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       child: Column(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          const Row(
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Rekap Kehadiran',
-                                    style: TextStyle(
-                                      fontSize: AppFonts.h3,
-                                      fontWeight: FontWeight.w400,
-                                      color: AppColors.textPrimary,
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Semester ini',
-                                    style: const TextStyle(
-                                      fontSize: AppFonts.small,
-                                      color: AppColors.textMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
                               Text(
-                                '$attendancePercent%',
-                                style: const TextStyle(
+                                'Rekap Kehadiran',
+                                style: TextStyle(
                                   fontSize: AppFonts.h3,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w400,
                                   color: AppColors.textPrimary,
+                                  letterSpacing: -0.2,
                                 ),
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 14),
-                          // Progress bar
-                          Container(
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: AppColors.border,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: FractionallySizedBox(
-                              alignment: Alignment.centerLeft,
-                              widthFactor: attendancePercent / 100,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary,
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                              ),
-                            ),
                           ),
                           const SizedBox(height: 18),
                           Row(
