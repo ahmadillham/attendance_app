@@ -306,7 +306,21 @@ router.get('/history', authMiddleware, studentMiddleware, async (req, res) => {
             orderBy: { date: 'desc' }
         });
 
-        // 3. Fetch enrolled courses (to know all courses the student takes)
+        // 3. Fetch rejected leave requests (counts as absent)
+        const rejectedLeaves = await prisma.leaveRequest.findMany({
+            where: { 
+                studentId,
+                status: 'REJECTED'
+            },
+            include: {
+                course: {
+                    include: { lecturer: true }
+                }
+            },
+            orderBy: { date: 'desc' }
+        });
+
+        // 4. Fetch enrolled courses
         const enrollments = await prisma.enrollment.findMany({
             where: { studentId },
             include: {
@@ -316,9 +330,8 @@ router.get('/history', authMiddleware, studentMiddleware, async (req, res) => {
             }
         });
 
-        // 4. Build per-course data
-        // Track which meetingCounts are covered by attendance or leave
-        const courseData = {}; // courseId -> { course, presentMeetings: Set, leaveMeetings: Set, maxMeeting: number, records: [] }
+        // 5. Build per-course data
+        const courseData = {};
 
         // Initialize from enrollments
         for (const enrollment of enrollments) {
@@ -350,12 +363,11 @@ router.get('/history', authMiddleware, studentMiddleware, async (req, res) => {
             courseData[cid].records.push(record);
         }
 
-        // Fill approved leaves
+        // Fill approved leaves (status: 'leave')
         for (const leave of approvedLeaves) {
             const cid = leave.courseId;
             if (!courseData[cid]) continue;
 
-            // Assign a meetingCount for this leave
             courseData[cid].maxMeeting += 1;
             const meetingNum = courseData[cid].maxMeeting;
             courseData[cid].leaveMeetings.add(meetingNum);
@@ -374,16 +386,39 @@ router.get('/history', authMiddleware, studentMiddleware, async (req, res) => {
             });
         }
 
-        // 5. Calculate absent meetings
-        // For each course, check meetings from 1..maxMeeting that have no present or leave
+        // Fill rejected leaves (counts as absent — student was not present and has no valid excuse)
+        for (const leave of rejectedLeaves) {
+            const cid = leave.courseId;
+            if (!courseData[cid]) continue;
+
+            courseData[cid].maxMeeting += 1;
+            const meetingNum = courseData[cid].maxMeeting;
+
+            courseData[cid].records.push({
+                id: leave.id,
+                status: 'absent',
+                date: leave.date,
+                meetingCount: meetingNum,
+                faceVerified: false,
+                studentId: leave.studentId,
+                courseId: leave.courseId,
+                course: leave.course,
+                createdAt: leave.createdAt,
+                updatedAt: leave.updatedAt,
+            });
+        }
+
+        // 6. Calculate absent meetings from gaps in meetingCount
         for (const cid of Object.keys(courseData)) {
             const cd = courseData[cid];
             const allCoveredMeetings = new Set([...cd.presentMeetings, ...cd.leaveMeetings]);
             
             for (let m = 1; m <= cd.maxMeeting; m++) {
                 if (!allCoveredMeetings.has(m)) {
-                    // This meeting has no record -> absent
-                    // Estimate date based on first attendance record's pattern
+                    // Check if this gap is already covered by a rejected leave record
+                    const alreadyHasRecord = cd.records.some(r => r.meetingCount === m);
+                    if (alreadyHasRecord) continue;
+
                     const firstRecord = cd.records.find(r => r.meetingCount === 1);
                     const baseDate = firstRecord ? new Date(firstRecord.date) : new Date();
                     const estimatedDate = new Date(baseDate);
@@ -405,7 +440,7 @@ router.get('/history', authMiddleware, studentMiddleware, async (req, res) => {
             }
         }
 
-        // 6. Merge all records and sort by date descending
+        // 7. Merge all records and sort by date descending
         const combined = Object.values(courseData).flatMap(cd => cd.records);
         combined.sort((a, b) => new Date(b.date) - new Date(a.date));
 

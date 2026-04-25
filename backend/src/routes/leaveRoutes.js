@@ -82,6 +82,28 @@ router.post('/', authMiddleware, studentMiddleware, upload.single('document'), a
             evidenceUrl = `/uploads/documents/${req.file.filename}`;
         }
 
+        // Check for duplicate leave requests (same student, same course, same date)
+        const startOfDay = new Date(leaveDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(leaveDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const existingLeaves = await prisma.leaveRequest.findMany({
+            where: {
+                studentId,
+                courseId: { in: courseIds },
+                date: { gte: startOfDay, lte: endOfDay },
+            },
+            include: { course: true },
+        });
+
+        if (existingLeaves.length > 0) {
+            const courseNames = existingLeaves.map(l => l.course.name).join(', ');
+            return res.status(400).json({
+                message: `Anda sudah mengajukan izin untuk: ${courseNames} pada tanggal tersebut.`,
+            });
+        }
+
         const leaveRequestsData = courseIds.map(courseId => ({
             reason,
             description,

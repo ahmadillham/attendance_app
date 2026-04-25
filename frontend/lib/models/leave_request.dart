@@ -9,6 +9,7 @@ class LeaveRequest {
   final String createdAt;
   final String? courseName;
   final String? courseCode;
+  final String? courseId;
 
   const LeaveRequest({
     required this.id,
@@ -20,6 +21,7 @@ class LeaveRequest {
     required this.createdAt,
     this.courseName,
     this.courseCode,
+    this.courseId,
   });
 
   factory LeaveRequest.fromJson(Map<String, dynamic> json) {
@@ -40,6 +42,7 @@ class LeaveRequest {
       createdAt: json['createdAt'] ?? '',
       courseName: cName,
       courseCode: cCode,
+      courseId: json['courseId']?.toString(),
     );
   }
 

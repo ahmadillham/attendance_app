@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../services/app_time.dart';
 import '../providers/app_provider.dart';
 import '../models/schedule.dart';
+import '../models/leave_request.dart';
 
 /// LeaveRequestScreen — Modern Clean Design
 /// ─────────────────────────────────────────────
@@ -51,6 +52,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
   bool _isSubmitting = false;
 
   List<String> _selectedCourseIds = [];
+  List<String> _disabledCourseIds = [];
   List<ScheduleItem> _availableSchedules = [];
   bool _isLoadingSchedules = false;
 
@@ -76,11 +78,46 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
     try {
       const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
       final dayName = dayNames[_selectedDate.weekday % 7];
-      final schedules = await ApiService.getSchedulesByDay(dayName);
+      
+      // Fetch both schedules and leave history concurrently
+      final results = await Future.wait([
+        ApiService.getSchedulesByDay(dayName),
+        ApiService.getLeaveHistory(),
+      ]);
+      
+      final schedules = results[0] as List<ScheduleItem>;
+      final leaveHistory = results[1] as List;
+
+      // Find courses that already have a leave request on this specific date
+      final disabledIds = <String>[];
+      for (final leave in leaveHistory) {
+        if (leave is! LeaveRequest) continue;
+        
+        try {
+          final leaveDate = DateTime.parse(leave.date).toLocal();
+          if (leaveDate.year == _selectedDate.year &&
+              leaveDate.month == _selectedDate.month &&
+              leaveDate.day == _selectedDate.day &&
+              leave.courseId != null) {
+            disabledIds.add(leave.courseId!);
+          }
+        } catch (_) {
+          // Ignore parse errors
+        }
+      }
+
       if (mounted) {
         setState(() {
           _availableSchedules = schedules;
-          _selectedCourseIds = schedules.map((s) => s.courseId).whereType<String>().toList();
+          _disabledCourseIds = disabledIds;
+          
+          // Auto-select only courses that are not disabled
+          _selectedCourseIds = schedules
+              .map((s) => s.courseId)
+              .whereType<String>()
+              .where((id) => !disabledIds.contains(id))
+              .toList();
+              
           _isLoadingSchedules = false;
         });
       }
@@ -507,8 +544,10 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                         if (courseId == null) return const SizedBox.shrink();
                         
                         final isSelected = _selectedCourseIds.contains(courseId);
+                        final isDisabled = _disabledCourseIds.contains(courseId);
+                        
                         return GestureDetector(
-                          onTap: () {
+                          onTap: isDisabled ? null : () {
                             setState(() {
                               if (isSelected) {
                                 _selectedCourseIds.remove(courseId);
@@ -517,48 +556,73 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
                               }
                             });
                           },
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                            decoration: BoxDecoration(
-                              color: isSelected ? AppColors.primarySurface : AppColors.surface,
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              border: Border.all(
-                                color: isSelected ? AppColors.primary : AppColors.borderLight,
-                                width: 1,
+                          child: Opacity(
+                            opacity: isDisabled ? 0.6 : 1.0,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                              decoration: BoxDecoration(
+                                color: isDisabled 
+                                    ? AppColors.borderLight.withValues(alpha: 0.3)
+                                    : isSelected ? AppColors.primarySurface : AppColors.surface,
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                border: Border.all(
+                                  color: isDisabled ? AppColors.border : isSelected ? AppColors.primary : AppColors.borderLight,
+                                  width: 1,
+                                ),
                               ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  isSelected ? Icons.check_box : Icons.check_box_outline_blank,
-                                  color: isSelected ? AppColors.primary : AppColors.textMuted,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        schedule.subject,
-                                        style: TextStyle(
-                                          fontSize: AppFonts.body,
-                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                          color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        schedule.time,
-                                        style: TextStyle(
-                                          fontSize: AppFonts.small,
-                                          color: isSelected ? AppColors.primary.withValues(alpha: 0.8) : AppColors.textMuted,
-                                        ),
-                                      ),
-                                    ],
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isDisabled 
+                                        ? Icons.do_not_disturb_alt
+                                        : isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+                                    color: isDisabled ? AppColors.textMuted : isSelected ? AppColors.primary : AppColors.textMuted,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          schedule.subject,
+                                          style: TextStyle(
+                                            fontSize: AppFonts.body,
+                                            fontWeight: isSelected && !isDisabled ? FontWeight.w600 : FontWeight.w400,
+                                            color: isDisabled ? AppColors.textMuted : isSelected ? AppColors.primary : AppColors.textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              schedule.time,
+                                              style: TextStyle(
+                                                fontSize: AppFonts.small,
+                                                color: isDisabled ? AppColors.textMuted : isSelected ? AppColors.primary.withValues(alpha: 0.8) : AppColors.textMuted,
+                                              ),
+                                            ),
+                                            if (isDisabled) ...[
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.borderLight,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text(
+                                                  'Sudah diajukan',
+                                                  style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );

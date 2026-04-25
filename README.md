@@ -1,50 +1,124 @@
-# Absensi Kuliah — Dokumentasi Proyek
+# Absensi Kuliah
 
-Sistem presensi mahasiswa berbasis mobile yang mengintegrasikan **Flutter** (frontend) dengan **Node.js/Express** (backend) menggunakan autentikasi berbasis JWT, verifikasi wajah, dan validasi geofencing GPS.
-
----
-
-## Daftar Isi
-
-1. [Gambaran Umum](#gambaran-umum)
-2. [Arsitektur Sistem](#arsitektur-sistem)
-3. [Struktur Proyek](#struktur-proyek)
-4. [Persyaratan Sistem](#persyaratan-sistem)
-5. [Panduan Instalasi](#panduan-instalasi)
-6. [Konfigurasi Lingkungan](#konfigurasi-lingkungan)
-7. [Menjalankan Aplikasi](#menjalankan-aplikasi)
-8. [API Reference](#api-reference)
-9. [Model Database](#model-database)
-10. [Arsitektur Frontend](#arsitektur-frontend)
-11. [Alur Autentikasi](#alur-autentikasi)
-12. [Keamanan](#keamanan)
+Sistem presensi mahasiswa berbasis mobile menggunakan **Flutter** + **Node.js/Express** dengan verifikasi wajah, geofencing GPS, dan manajemen perizinan dua arah (mahasiswa ↔ dosen).
 
 ---
 
-## Gambaran Umum
+## Fitur Utama
 
-**Absensi Kuliah** adalah aplikasi presensi digital yang dirancang untuk mahasiswa Universitas Nahdlatul Ulama Sunan Giri. Mahasiswa dapat melakukan absensi melalui smartphone dengan validasi berlapis:
+### Mahasiswa
+- **Absensi** — Verifikasi wajah + GPS dengan liveness detection
+- **Screen Flash** — Layar putih + brightness maksimal untuk pencahayaan minim
+- **Pengajuan Izin** — Sakit / Kegiatan Akademik / Keluarga, dengan upload dokumen
+- **Riwayat** — Statistik hadir, absen, izin per mata kuliah
+- **Biometrik** — Login sidik jari / Face ID setelah login pertama
+- **Mock Time** — Simulasi waktu untuk testing (5x tap background di login)
 
-- 🔐 **Autentikasi JWT** — Login dengan NIM dan password
-- 📍 **Geofencing GPS** — Validasi lokasi dalam radius 200m dari kampus
-- 👤 **Verifikasi Wajah** — Face recognition via face-api.js (opsional)
-- 🧬 **Biometrik** — Login dengan sidik jari / Face ID setelah login pertama
+### Dosen
+- **Dashboard** — Ringkasan mata kuliah yang diampu
+- **Rekap Absensi** — Daftar kehadiran per mahasiswa per mata kuliah
+- **Kelola Izin** — Approve / Reject pengajuan izin mahasiswa
+- **Profil** — Ganti password
 
 ---
 
-## Arsitektur Sistem
+## Tech Stack
 
+| Layer | Teknologi |
+|-------|-----------|
+| Frontend | Flutter 3.11+, Provider, Camera, Geolocator |
+| Backend | Node.js 20+, Express, Prisma 7, JWT |
+| Database | MySQL 8 (via Prisma MariaDB adapter) |
+| Face Recognition | @vladmandic/face-api (SSD Mobilenet + 128D embedding) |
+
+---
+
+## Quick Start
+
+### 1. Setup Database
+
+```bash
+# Jalankan MySQL 8 (contoh via Docker)
+docker run -d --name mysql8 -p 3306:3306 \
+  -e MYSQL_ROOT_PASSWORD=root \
+  -e MYSQL_DATABASE=absen_flutter \
+  mysql:8
 ```
-┌─────────────────────────────────┐     HTTP/REST      ┌──────────────────────────────────┐
-│        Flutter App (Android)    │ ◄────────────────► │   Node.js / Express Backend      │
-│                                 │                     │                                  │
-│  • Provider state management    │                     │  • JWT authentication            │
-│  • Biometric auth (local_auth)  │                     │  • Prisma ORM (MariaDB adapter)  │
-│  • Camera (face capture)        │                     │  • MySQL 8 database              │
-│  • GPS (geolocator)             │                     │  • Multer file upload            │
-│  • Secure storage (credentials) │                     │  • face-api.js (bypass mode)     │
-└─────────────────────────────────┘                     └──────────────────────────────────┘
+
+### 2. Setup Backend
+
+```bash
+cd backend
+npm install
+
+# Buat file .env
+cat > .env << EOF
+PORT=3000
+DATABASE_URL="mysql://root:root@localhost:3306/absen_flutter"
+TOKEN_SECRET="your-secret-key-minimum-32-characters-long"
+EOF
+
+# Migrasi + seed database
+npx prisma migrate reset --force
 ```
+
+### 3. Setup Frontend
+
+```bash
+cd frontend
+flutter pub get
+```
+
+### 4. Jalankan
+
+```bash
+# Cara cepat (backend + frontend sekaligus)
+./dev.sh
+
+# Atau manual:
+cd backend && npm run dev     # Terminal 1
+cd frontend && flutter run    # Terminal 2
+
+# Jika pakai HP fisik, jalankan dulu:
+adb reverse tcp:3000 tcp:3000
+```
+
+---
+
+## Akun Default
+
+Semua akun menggunakan password: **`Password123`**
+
+### Mahasiswa
+
+| NIM | Nama |
+|-----|------|
+| `241101052` | Ahmad Bahrudin Ilham |
+
+### Dosen
+
+| NIDN | Nama | Mata Kuliah |
+|------|------|-------------|
+| `198501012001` | Dr. Mivan Ariful Fathoni, M.Si | Logika Matematika |
+| `198501012002` | Muhammad Jauhar Fikri, S.Kom., M.Kom | Analisis Dan Desain Perangkat Lunak |
+| `198501012003` | Guruh Putro Digantoro, S.Kom., M.Kom | Pemrograman Mikrokontroller |
+| `198501012004` | Zakki Alawi, S.Kom., MM | Pemrograman Berbasis Mobile |
+| `198501012005` | Dwi Issadari Hastuti, S.Pd., S.Kom., M.Kom | Interaksi Manusia & Komputer |
+| `198501012006` | Mula Agung Barata, S.ST., M.Kom | Internet Of Things |
+| `198501012007` | Afnil Efan Pajri, S.Kom., M.I.Kom | Komputasi Paralel Dan Terdistribusi |
+
+> **Dev Mode Quick Login** — Di halaman login, terdapat dropdown "Mahasiswa" dan "Dosen" untuk login cepat tanpa mengetik.
+
+---
+
+## Reset Database
+
+```bash
+cd backend
+npx prisma migrate reset --force
+```
+
+Perintah ini akan menghapus semua data, membuat ulang tabel, dan menjalankan seed otomatis.
 
 ---
 
@@ -52,480 +126,114 @@ Sistem presensi mahasiswa berbasis mobile yang mengintegrasikan **Flutter** (fro
 
 ```
 absen flutter/
-├── frontend/                          # Aplikasi Flutter
-│   ├── lib/
-│   │   ├── main.dart                  # Entry point & routing
-│   │   ├── constants/
-│   │   │   ├── theme.dart             # Design system (warna, tipografi)
-│   │   │   └── mock_data.dart         # Data dummy (hanya debug mode)
-│   │   ├── models/
-│   │   │   ├── student.dart           # Model mahasiswa + attendance summary
-│   │   │   ├── schedule.dart          # Model jadwal kuliah
-│   │   │   ├── attendance.dart        # Model absensi & rekapitulasi
-│   │   │   └── leave_request.dart     # Model pengajuan izin
-│   │   ├── services/
-│   │   │   └── api_service.dart       # HTTP client, token & credential management
-│   │   ├── providers/
-│   │   │   └── app_provider.dart      # Global state (Provider pattern)
-│   │   ├── screens/
-│   │   │   ├── splash_screen.dart     # Auth check + token expiry validation
-│   │   │   ├── login_screen.dart      # Login NIM/password + biometrik
-│   │   │   ├── dashboard_screen.dart  # Beranda utama
-│   │   │   ├── attendance_screen.dart # Capture wajah + GPS absensi
-│   │   │   ├── history_screen.dart    # Riwayat absensi per mata kuliah
-│   │   │   ├── schedule_screen.dart   # Jadwal mingguan
-│   │   │   ├── leave_request_screen.dart  # Form pengajuan izin
-│   │   │   ├── leave_history_screen.dart  # Riwayat pengajuan izin
-│   │   │   ├── profile_screen.dart    # Profil & ganti password
-│   │   │   └── face_register_screen.dart  # Pendaftaran data wajah
-│   │   └── widgets/
-│   │       ├── screen_header.dart     # Header komponen reusable
-│   │       └── section_label.dart     # Label seksi reusable
-│   └── pubspec.yaml
+├── dev.sh                              # Script start all-in-one
+├── frontend/
+│   └── lib/
+│       ├── main.dart                   # Entry point & routing
+│       ├── constants/
+│       │   ├── theme.dart              # Design system
+│       │   └── mock_data.dart          # Data fallback (debug only)
+│       ├── models/                     # Data models
+│       ├── services/
+│       │   ├── api_service.dart        # HTTP client & token management
+│       │   └── app_time.dart           # Mock time system
+│       ├── providers/
+│       │   ├── app_provider.dart       # State mahasiswa
+│       │   └── lecturer_provider.dart  # State dosen
+│       └── screens/
+│           ├── login_screen.dart       # Login + biometrik + quick login
+│           ├── dashboard_screen.dart   # Beranda mahasiswa
+│           ├── attendance_screen.dart  # Absensi (kamera + GPS + flash)
+│           ├── history_screen.dart     # Riwayat absensi
+│           ├── schedule_screen.dart    # Jadwal mingguan
+│           ├── leave_request_screen.dart    # Form izin
+│           ├── leave_history_screen.dart    # Riwayat izin
+│           ├── profile_screen.dart     # Profil mahasiswa
+│           ├── face_register_screen.dart    # Daftar wajah
+│           └── lecturer/
+│               ├── lecturer_dashboard_screen.dart
+│               ├── course_attendance_screen.dart
+│               ├── manage_leave_screen.dart
+│               └── lecturer_profile_screen.dart
 │
-└── backend/                           # Backend Node.js
+└── backend/
     ├── src/
-    │   ├── index.js                   # Entry point, middleware, routing
+    │   ├── index.js                    # Entry point
     │   ├── routes/
-    │   │   ├── authRoutes.js          # POST /register, POST /login
-    │   │   ├── attendanceRoutes.js    # POST /, GET /history
-    │   │   ├── scheduleRoutes.js      # GET /, GET /:id
-    │   │   ├── leaveRoutes.js         # POST /, GET /
-    │   │   ├── profileRoutes.js       # GET /, PUT /password
-    │   │   └── faceRoutes.js          # POST /register, GET /status
-    │   ├── controllers/
-    │   │   ├── authController.js
-    │   │   └── profileController.js
+    │   │   ├── authRoutes.js           # Login & register
+    │   │   ├── attendanceRoutes.js     # Absensi & riwayat
+    │   │   ├── scheduleRoutes.js       # Jadwal
+    │   │   ├── leaveRoutes.js          # Izin (mahasiswa)
+    │   │   ├── lecturerRoutes.js       # Semua API dosen
+    │   │   ├── profileRoutes.js        # Profil mahasiswa
+    │   │   └── faceRoutes.js           # Registrasi wajah
     │   ├── middlewares/
-    │   │   ├── authMiddleware.js      # JWT verification
-    │   │   ├── uploadMiddleware.js    # Multer config
-    │   │   └── errorHandler.js
-    │   ├── lib/
-    │   │   ├── prisma.js              # Prisma client (MariaDB adapter)
-    │   │   ├── faceDescriptor.js      # face-api.js model loading
-    │   │   └── faceVerify.js          # Euclidean distance face comparison
-    │   └── validations/
-    │       ├── authValidation.js
-    │       └── attendanceValidation.js
-    ├── prisma/
-    │   ├── schema.prisma              # Database schema
-    │   └── seed.js                    # Data awal (1 mahasiswa, 7 mata kuliah)
-    ├── prisma.config.ts               # Konfigurasi Prisma 7
-    └── .env                           # Variabel lingkungan
+    │   │   ├── authMiddleware.js       # JWT verification
+    │   │   ├── studentMiddleware.js    # Role check: student
+    │   │   ├── lecturerMiddleware.js   # Role check: lecturer
+    │   │   └── uploadMiddleware.js     # Multer config
+    │   └── lib/
+    │       ├── prisma.js               # Prisma client
+    │       ├── faceDescriptor.js       # Face embedding extraction
+    │       └── faceVerify.js           # Cosine similarity comparison
+    └── prisma/
+        ├── schema.prisma               # Database schema
+        └── seed.js                     # Data awal
 ```
 
 ---
 
-## Persyaratan Sistem
+## API Endpoints
 
-### Backend
-| Komponen | Versi |
-|----------|-------|
-| Node.js | ≥ 20 |
-| MySQL | 8.x (via Docker atau native) |
-| npm | ≥ 10 |
+Semua endpoint (kecuali `/auth`) memerlukan header: `Authorization: Bearer <token>`
 
-### Frontend
-| Komponen | Versi |
-|----------|-------|
-| Flutter SDK | ≥ 3.11.4 |
-| Dart SDK | ≥ 3.11.4 |
-| Android SDK | API 21+ (Android 5.0) |
-
----
-
-## Panduan Instalasi
-
-### 1. Backend
-
-```bash
-cd backend
-
-# Install dependensi
-npm install
-
-# Buat file .env (lihat bagian Konfigurasi)
-cp .env.example .env
-
-# Jalankan migrasi database
-npx prisma migrate deploy
-
-# (Opsional) Isi data awal
-npx prisma db seed
-```
-
-### 2. Frontend
-
-```bash
-cd frontend
-
-# Install dependensi Flutter
-flutter pub get
-
-# (Opsional) Cek perangkat yang tersambung
-flutter devices
-```
-
----
-
-## Konfigurasi Lingkungan
-
-### Backend — `backend/.env`
-
-```env
-PORT=3000
-DATABASE_URL="mysql://root:PASSWORD@localhost:3306/absen_flutter"
-TOKEN_SECRET="your-secret-key-min-32-chars"
-```
-
-> **Catatan:** JWT token berlaku selama **1 hari**. Ganti `PASSWORD` dengan password MySQL Anda.
-
-#### Jika menggunakan MySQL 8 via Docker
-
-Pastikan `prisma.js` menggunakan `allowPublicKeyRetrieval: true` agar adapter dapat mengautentikasi menggunakan `caching_sha2_password`:
-
-```javascript
-const adapter = new PrismaMariaDb({
-  host, port, user, password, database,
-  allowPublicKeyRetrieval: true,  // Wajib untuk MySQL 8
-});
-```
-
-### Frontend — URL Backend
-
-Secara default, aplikasi menggunakan `http://127.0.0.1:3000/api` sebagai URL backend.
-Untuk perangkat fisik Android, diperlukan konfigurasi `adb reverse` agar perangkat bisa mengakses localhost komputer.
-
-URL backend juga dapat diubah menggunakan `--dart-define`:
-
-```bash
-# Produksi
-flutter build apk --dart-define=API_URL=https://api.yourdomain.com/api
-```
-
----
-
-## Menjalankan Aplikasi
-
-### Cara Paling Cepat (Development)
-
-Kami telah menyediakan script `dev.sh` di root direktori untuk menjalankan seluruh environment (adb reverse, backend, dan frontend) dalam satu perintah:
-
-```bash
-# Pastikan HP Android tersambung dengan USB Debugging aktif
-./dev.sh
-```
-
-Script ini otomatis melakukan:
-1. `adb reverse tcp:3000 tcp:3000` (agar HP bisa akses localhost PC)
-2. Menjalankan backend Node.js (`npm run dev`)
-3. Menjalankan frontend Flutter (`flutter run`)
-
-### Cara Manual (Menjalankan Terpisah)
-
-#### Backend
-
-```bash
-cd backend
-
-# Mode development (hot reload via nodemon)
-npm run dev
-
-# Mode produksi
-npm start
-```
-
-Verifikasi server berjalan:
-```bash
-curl http://localhost:3000/api/health
-# {"status":"ok","message":"Absensi Backend API is running"}
-```
-
-### Frontend
-
-```bash
-cd frontend
-
-# Pastikan sudah menjalankan adb reverse jika menggunakan perangkat fisik
-# adb reverse tcp:3000 tcp:3000
-
-# Jalankan aplikasi (menggunakan 127.0.0.1 secara default)
-flutter run
-```
-
-### Akun Default (setelah seed)
-
-| Field | Nilai |
-|-------|-------|
-| NIM / Student ID | `241101052` |
-| Password | `Password123` |
-| Nama | Ahmad Bahrudin Ilham |
-
----
-
-## API Reference
-
-Semua endpoint kecuali `/auth` memerlukan header:
-```
-Authorization: Bearer <jwt_token>
-```
-
-### Autentikasi
-
-| Method | Endpoint | Deskripsi | Auth |
-|--------|----------|-----------|------|
-| `POST` | `/api/auth/register` | Daftarkan mahasiswa baru | ❌ |
-| `POST` | `/api/auth/login` | Login, mendapat JWT token | ❌ |
-| `GET`  | `/api/health` | Cek status server | ❌ |
-
-#### POST `/api/auth/login`
-```json
-// Request
-{ "studentId": "241101052", "password": "Password123" }
-
-// Response 200
-{ "token": "eyJhbGci...", "studentId": "241101052", "name": "Ahmad Bahrudin Ilham" }
-
-// Response 400
-{ "message": "Student ID not found" }
-{ "message": "Invalid password" }
-```
-
----
-
-### Absensi
-
+### Auth
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
-| `POST` | `/api/attendance` | Submit absensi (multipart/form-data) |
-| `GET`  | `/api/attendance/history` | Riwayat absensi mahasiswa |
+| `POST` | `/api/auth/login` | Login (NIM/NIDN + password) |
+| `POST` | `/api/auth/register` | Daftar mahasiswa baru |
 
-#### POST `/api/attendance` — `multipart/form-data`
-| Field | Tipe | Wajib | Keterangan |
-|-------|------|-------|------------|
-| `courseId` | string | ✅ | ID mata kuliah |
-| `status` | string | ✅ | `present`, `absent`, `leave` |
-| `latitude` | number | ✅ | Koordinat GPS mahasiswa |
-| `longitude` | number | ✅ | Koordinat GPS mahasiswa |
-| `meetingCount` | number | ❌ | Auto-hitung jika tidak diisi |
-| `faceImage` | file | ✅ | Foto wajah untuk verifikasi |
-
-**Validasi keamanan yang dilakukan:**
-1. Verifikasi JWT token
-2. Validasi enrollment (mahasiswa terdaftar di mata kuliah)
-3. Verifikasi wajah via face-api.js (bypass mode jika model tidak tersedia)
-4. Geofencing — radius 200m dari koordinat kampus (`-7.167311, 111.892951`)
-5. Cek duplikasi absensi per pertemuan
-
----
-
-### Jadwal
-
+### Mahasiswa
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
-| `GET` | `/api/schedules` | Semua jadwal hari ini |
-| `GET` | `/api/schedules?dayOfWeek=Senin` | Jadwal hari tertentu |
-
-Nilai `dayOfWeek` yang valid: `Senin`, `Selasa`, `Rabu`, `Kamis`, `Jumat`, `Sabtu`
-
----
-
-### Izin / Cuti
-
-| Method | Endpoint | Deskripsi |
-|--------|----------|-----------|
-| `POST` | `/api/leave-requests` | Ajukan izin (multipart/form-data) |
-| `GET`  | `/api/leave-requests` | Riwayat pengajuan izin |
-
-#### POST `/api/leave-requests` — `multipart/form-data`
-| Field | Tipe | Wajib |
-|-------|------|-------|
-| `reason` | string | ✅ |
-| `description` | string | ❌ |
-| `dateFrom` | string (ISO date) | ✅ |
-| `dateTo` | string (ISO date) | ✅ |
-| `document` | file | ❌ |
-
----
-
-### Profil
-
-| Method | Endpoint | Deskripsi |
-|--------|----------|-----------|
-| `GET` | `/api/profile` | Data profil mahasiswa |
+| `POST` | `/api/attendance` | Submit absensi (multipart) |
+| `GET` | `/api/attendance/history` | Riwayat (hadir + izin + absen) |
+| `GET` | `/api/schedules` | Jadwal kuliah |
+| `POST` | `/api/leave-requests` | Ajukan izin (multipart) |
+| `GET` | `/api/leave-requests` | Riwayat izin |
+| `GET` | `/api/profile` | Data profil |
 | `PUT` | `/api/profile/password` | Ganti password |
+| `POST` | `/api/face/register` | Daftar wajah (multipart) |
+| `GET` | `/api/face/status` | Status registrasi wajah |
 
-#### PUT `/api/profile/password`
-```json
-{ "oldPassword": "Password123", "newPassword": "NewPassword456" }
-```
-
----
-
-### Face Recognition
-
+### Dosen
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
-| `POST` | `/api/face/register` | Daftarkan data wajah |
-| `GET`  | `/api/face/status` | Cek status pendaftaran wajah |
+| `GET` | `/api/lecturer/dashboard` | Dashboard dosen |
+| `GET` | `/api/lecturer/courses` | Daftar mata kuliah diampu |
+| `GET` | `/api/lecturer/courses/:id/attendance` | Rekap absensi per MK |
+| `PUT` | `/api/lecturer/attendance/:id` | Edit status kehadiran |
+| `GET` | `/api/lecturer/leave-requests` | Daftar izin masuk |
+| `PUT` | `/api/lecturer/leave-requests/:id` | Approve/Reject izin |
+| `GET` | `/api/lecturer/profile` | Profil dosen |
+| `PUT` | `/api/lecturer/profile/password` | Ganti password |
 
 ---
 
-## Model Database
+## Validasi Absensi (4 Lapis)
 
-```prisma
-model Student {
-  id             String         // UUID primary key
-  studentId      String         // NIM (unik)
-  name           String
-  email          String         // unik
-  phone          String?
-  department     String         // Program studi
-  faculty        String
-  semester       Int
-  password       String         // bcrypt hashed
-  faceDescriptor Json?          // Array 128D float (face-api.js)
-  attendances    Attendance[]
-  leaveRequests  LeaveRequest[]
-  enrollments    Enrollment[]
-}
-
-model Course {
-  code       String    // Kode MK (unik)
-  name       String
-  lecturer   String
-  schedules  Schedule[]
-  attendances Attendance[]
-  enrollments Enrollment[]
-}
-
-model Attendance {
-  status       AttendanceStatus  // present | absent | leave
-  meetingCount Int               // Pertemuan ke-N
-  date         DateTime
-  studentId    String
-  courseId     String
-  // Constraint: unique(studentId, courseId, meetingCount)
-}
-
-model LeaveRequest {
-  reason      String
-  description String?
-  evidenceUrl String?           // Path file dokumen bukti
-  status      LeaveStatus       // PENDING | APPROVED | REJECTED
-  dateFrom    DateTime
-  dateTo      DateTime
-  studentId   String
-}
-
-model Schedule {
-  dayOfWeek  DayOfWeek   // Senin–Sabtu
-  startTime  String      // Format "HH:mm"
-  endTime    String
-  room       String
-  courseId   String
-}
-```
+| # | Layer | Keterangan |
+|---|-------|------------|
+| 1 | JWT Token | Autentikasi pengguna |
+| 2 | Enrollment | Mahasiswa terdaftar di mata kuliah |
+| 3 | Geofencing | Radius 200m dari kampus (Haversine) |
+| 4 | Face Verification | Cosine similarity 128D descriptor (threshold 0.75) |
 
 ---
 
-## Arsitektur Frontend
+## Catatan
 
-### State Management
-
-Aplikasi menggunakan **Provider pattern**. `AppProvider` adalah satu-satunya provider global yang menyimpan:
-
-```dart
-class AppProvider extends ChangeNotifier {
-  // Data
-  DashboardData? dashboardData;
-  List<CourseAttendance> attendanceHistory;
-  Student? profile;
-  List<LeaveRequest> leaveHistory;
-
-  // Error states (terisolasi per domain)
-  String? dashboardError;
-  String? historyError;
-  String? profileError;
-  String? leaveError;
-
-  // Loading states
-  bool isLoadingDashboard;
-  bool isLoadingHistory;
-  // ...
-}
-```
-
-### Alur Data
-
-```
-Screen → AppProvider → ApiService → Backend API
-                    ↑
-               notifyListeners()
-```
-
-### Model Utama
-
-| Model | File | Keterangan |
-|-------|------|------------|
-| `Student` | `models/student.dart` | Data mahasiswa + `AttendanceSummary` |
-| `ScheduleItem` | `models/schedule.dart` | Satu slot jadwal |
-| `CourseAttendance` | `models/attendance.dart` | Rekapitulasi per mata kuliah |
-| `LeaveRequest` | `models/leave_request.dart` | Pengajuan izin |
-| `DashboardData` | `services/api_service.dart` | Agregat data dashboard |
-
----
-
-## Alur Autentikasi
-
-```
-Buka App
-    │
-    ▼
-SplashScreen._checkAuth()
-    ├── Token ada & valid (exp belum lewat)? ──► /main
-    ├── Token expired, ada saved credentials? ──► loginWithSavedCredentials() ──► /main
-    └── Tidak ada sesi ────────────────────────► /login
-
-/login
-    ├── Login NIM + Password
-    │       ├── POST /api/auth/login ──► simpan JWT token
-    │       └── Simpan NIM+password di FlutterSecureStorage
-    │               └──► /main
-    │
-    └── Login Sidik Jari / Face ID
-            ├── Cek hasSavedCredentials()
-            │       └── Tidak ada ──► tampilkan peringatan
-            ├── Autentikasi biometrik (local_auth)
-            └── loginWithSavedCredentials() ──► /main
-```
-
----
-
-## Keamanan
-
-### Validasi Absensi (4 Lapis)
-
-| Layer | Mekanisme | Keterangan |
-|-------|-----------|------------|
-| 1 | JWT Token | Semua endpoint dilindungi middleware |
-| 2 | Enrollment Check | Student hanya bisa absen di MK yang diambil |
-| 3 | Geofencing | Radius 200m dari kampus (Haversine formula) |
-| 4 | Face Verification | Euclidean distance dari 128D face descriptor |
-
-### Penyimpanan Credential
-
-- **JWT Token** → `SharedPreferences` (sesi aktif)
-- **NIM + Password** → `FlutterSecureStorage` (re-auth biometrik, terenkripsi di Keystore Android)
-- **Token dihapus** saat logout, **credential tetap** untuk biometrik
-
-### Catatan Keamanan
-
-> [!WARNING]
-> **Face recognition berjalan dalam BYPASS MODE** saat modul `@tensorflow/tfjs-node` tidak terinstal. Absensi tetap dapat dilakukan tanpa verifikasi wajah. Untuk produksi, instal dependensi tersebut:
-> ```bash
-> npm install @tensorflow/tfjs-node
-> ```
-
-> [!NOTE]
-> Mock data fallback (`kUseMockFallback`) hanya aktif di debug build (`flutter run`). Pada release build (`flutter build apk`), error API akan ditampilkan ke pengguna, bukan diganti data palsu.
+- **Face recognition** berjalan dalam bypass mode jika `@tensorflow/tfjs-node` tidak terinstal
+- **Liveness detection** menggunakan pergerakan landmark wajah antar-frame (threshold 8px)
+- **Screen flash** menggunakan package `screen_brightness` untuk kontrol brightness
+- **Mock time** hanya aktif di debug build, tidak berpengaruh di release build

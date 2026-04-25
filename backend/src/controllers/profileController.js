@@ -31,39 +31,63 @@ const getProfile = async (req, res) => {
             return res.status(404).json({ message: 'Student not found' });
         }
 
-        // Calculate attendance summary
-        const attendances = await prisma.attendance.groupBy({
-            by: ['status'],
+        // Calculate attendance summary (synced with /attendance/history logic)
+        // 1. Get all attendance records grouped by course
+        const attendanceRecords = await prisma.attendance.findMany({
             where: { studentId },
-            _count: { status: true },
+            select: { courseId: true, meetingCount: true, status: true },
         });
 
-        const summary = { present: 0, absent: 0, leave: 0, total: 0 };
-        attendances.forEach(a => {
-            summary[a.status] = a._count.status;
-            summary.total += a._count.status;
+        // 2. Get approved leave requests
+        const approvedLeaves = await prisma.leaveRequest.findMany({
+            where: { studentId, status: 'APPROVED' },
+            select: { courseId: true },
         });
 
-        // Include leave request outcomes in the summary:
-        // APPROVED → counts as "leave" (izin)
-        // REJECTED → counts as "absent" (absen)
-        const leaveOutcomes = await prisma.leaveRequest.groupBy({
-            by: ['status'],
-            where: {
-                studentId,
-                status: { in: ['APPROVED', 'REJECTED'] },
-            },
-            _count: { status: true },
+        // 3. Get rejected leave requests (counts as absent)
+        const rejectedLeaves = await prisma.leaveRequest.findMany({
+            where: { studentId, status: 'REJECTED' },
+            select: { courseId: true },
         });
-        leaveOutcomes.forEach(lr => {
-            if (lr.status === 'APPROVED') {
-                summary.leave += lr._count.status;
-                summary.total += lr._count.status;
-            } else if (lr.status === 'REJECTED') {
-                summary.absent += lr._count.status;
-                summary.total += lr._count.status;
+
+        // 4. Build per-course max meeting and present count
+        const courseStats = {};
+        for (const record of attendanceRecords) {
+            const cid = record.courseId;
+            if (!courseStats[cid]) courseStats[cid] = { maxMeeting: 0, presentMeetings: new Set() };
+            courseStats[cid].presentMeetings.add(record.meetingCount);
+            if (record.meetingCount > courseStats[cid].maxMeeting) {
+                courseStats[cid].maxMeeting = record.meetingCount;
             }
-        });
+        }
+
+        // 5. Count leaves per course
+        const leavesPerCourse = {};
+        for (const leave of approvedLeaves) {
+            leavesPerCourse[leave.courseId] = (leavesPerCourse[leave.courseId] || 0) + 1;
+        }
+
+        const rejectedPerCourse = {};
+        for (const leave of rejectedLeaves) {
+            rejectedPerCourse[leave.courseId] = (rejectedPerCourse[leave.courseId] || 0) + 1;
+        }
+
+        // 6. Calculate totals
+        const summary = { present: 0, absent: 0, leave: 0, total: 0 };
+
+        for (const cid of Object.keys(courseStats)) {
+            const cs = courseStats[cid];
+            const leaveCount = leavesPerCourse[cid] || 0;
+            const rejectedCount = rejectedPerCourse[cid] || 0;
+            const totalMeetings = cs.maxMeeting + leaveCount + rejectedCount;
+            const presentCount = cs.presentMeetings.size;
+            const absentCount = totalMeetings - presentCount - leaveCount;
+
+            summary.present += presentCount;
+            summary.leave += leaveCount;
+            summary.absent += absentCount;
+            summary.total += totalMeetings;
+        }
 
         // Fallback: if no records at all, avoid division by zero
         if (summary.total === 0) summary.total = 1;
