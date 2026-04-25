@@ -48,14 +48,25 @@ if (!process.env.TOKEN_SECRET) {
 
 // Start Server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', async () => {
-    console.log(`Server running on port ${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+});
 
-    // Load face recognition models in background (non-blocking)
-    try {
-        const { initFaceApi } = require('./lib/faceDescriptor');
-        await initFaceApi();
-    } catch (err) {
-        console.warn(`⚠️  Face recognition unavailable: ${err.message}`);
+// Load face recognition models (Background process)
+const { initFaceApi } = require('./lib/faceDescriptor');
+initFaceApi().then(() => {
+    // Keep-alive heartbeat (prevents clean exit in some edge cases)
+    setInterval(() => {}, 1000 * 60 * 60); 
+}).catch(err => {
+    console.warn(`⚠️  Face recognition unavailable: ${err.message}`);
+});
+
+// Handle server errors
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use.`);
+    } else {
+        console.error(`❌ Server error: ${err.message}`);
     }
+    process.exit(1);
 });
