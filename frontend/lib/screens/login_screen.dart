@@ -681,6 +681,54 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                       const SizedBox(height: 32),
 
+                      // Dev Mode: Quick Login
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Dev Mode: Quick Login',
+                              style: TextStyle(
+                                fontSize: AppFonts.caption,
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildRoleDropdown(
+                                  title: 'Mahasiswa',
+                                  items: [
+                                    {'name': 'Ahmad Bahrudin', 'id': '241101052'},
+                                  ],
+                                ),
+                                const SizedBox(width: 12),
+                                _buildRoleDropdown(
+                                  title: 'Dosen',
+                                  items: [
+                                    {'name': 'Dr. Mivan Ariful', 'id': '198501012001'},
+                                    {'name': 'M. Jauhar Fikri', 'id': '198501012002'},
+                                    {'name': 'Guruh Putro D', 'id': '198501012003'},
+                                    {'name': 'Zakki Alawi', 'id': '198501012004'},
+                                    {'name': 'Dwi Issadari', 'id': '198501012005'},
+                                    {'name': 'Mula Agung', 'id': '198501012006'},
+                                    {'name': 'Afnil Efan Pajri', 'id': '198501012007'},
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
                       // Footer
                       Text(
                         '© 2026 Universitas Nahdlatul Ulama Sunan Giri',
@@ -753,6 +801,74 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoleDropdown({required String title, required List<Map<String, String>> items}) {
+    return PopupMenuButton<String>(
+      onSelected: (String id) {
+        _nimController.text = id;
+        _passwordController.text = 'Password123';
+        _handleLogin();
+      },
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      itemBuilder: (BuildContext context) {
+        return items.map((item) {
+          return PopupMenuItem<String>(
+            value: item['id'],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item['name']!,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  item['id']!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.arrow_drop_down, color: AppColors.primary, size: 18),
           ],
         ),
       ),

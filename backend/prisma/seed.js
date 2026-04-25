@@ -139,23 +139,40 @@ async function main() {
   });
   console.log(`✅ Jadwal Mingguan Tersimpan (7 slot)`);
 
-  // 8. Sample Attendance Records (Pertemuan 1-6 untuk semua MK)
+  // 8. Sample Attendance Records (Pertemuan 1-8, beberapa absen/tidak hadir)
   await prisma.attendance.deleteMany({ where: { studentId: student.id } });
   const attendanceData = [];
-  for (const course of courses) {
-    for (let meeting = 1; meeting <= 6; meeting++) {
-      const date = new Date(2026, 1, 2 + (meeting - 1) * 7); // weekly
-      attendanceData.push({
-        status: 'present',
-        meetingCount: meeting,
-        studentId: student.id,
-        courseId: course.id,
-        date,
-      });
+
+  // Definisikan pola kehadiran per mata kuliah (true = hadir, false = tidak hadir/absen)
+  const attendancePatterns = {
+    0: [true, true, true, false, true, true, false, true],      // MK 1: 6 hadir, 2 absen
+    1: [true, true, true, true, true, false, true, true],       // MK 2: 7 hadir, 1 absen
+    2: [true, false, true, true, true, true, false, false],     // MK 3: 5 hadir, 3 absen
+    3: [true, true, true, true, true, true, true, true],        // MK 4: 8 hadir (sempurna)
+    4: [true, true, false, true, true, true, true, true],       // MK 5: 7 hadir, 1 absen
+    5: [true, true, true, true, false, true, true, true],       // MK 6: 7 hadir, 1 absen
+    6: [true, true, true, true, true, true, false, true],       // MK 7: 7 hadir, 1 absen
+  };
+
+  for (let ci = 0; ci < courses.length; ci++) {
+    const pattern = attendancePatterns[ci] || Array(8).fill(true);
+    for (let meeting = 1; meeting <= 8; meeting++) {
+      if (pattern[meeting - 1]) {
+        const date = new Date(2026, 1, 2 + (meeting - 1) * 7); // weekly
+        attendanceData.push({
+          status: 'present',
+          meetingCount: meeting,
+          studentId: student.id,
+          courseId: courses[ci].id,
+          date,
+        });
+      }
+      // Jika false (tidak hadir), tidak ada record → backend akan mendeteksi sebagai absent
     }
   }
   await prisma.attendance.createMany({ data: attendanceData });
-  console.log(`✅ Sample Attendance: ${attendanceData.length} records (6 pertemuan × 7 MK)`);
+  const absentCount = courses.length * 8 - attendanceData.length;
+  console.log(`✅ Sample Attendance: ${attendanceData.length} hadir + ${absentCount} absen (8 pertemuan × 7 MK)`);
 
   console.log('🌲 Seeding database selesai seluruhnya!');
 }

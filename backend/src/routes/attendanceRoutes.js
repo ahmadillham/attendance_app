@@ -280,16 +280,136 @@ router.post('/', authMiddleware, studentMiddleware, upload.array('faceImages', 5
 router.get('/history', authMiddleware, studentMiddleware, async (req, res) => {
     try {
         const studentId = req.user.id;
-        const history = await prisma.attendance.findMany({
+
+        // 1. Fetch attendance records
+        const attendanceRecords = await prisma.attendance.findMany({
             where: { studentId },
             include: { 
                 course: {
                     include: { lecturer: true }
                 }
             },
+            orderBy: [{ courseId: 'asc' }, { meetingCount: 'asc' }]
+        });
+
+        // 2. Fetch approved leave requests
+        const approvedLeaves = await prisma.leaveRequest.findMany({
+            where: { 
+                studentId,
+                status: 'APPROVED'
+            },
+            include: {
+                course: {
+                    include: { lecturer: true }
+                }
+            },
             orderBy: { date: 'desc' }
         });
-        res.json(history);
+
+        // 3. Fetch enrolled courses (to know all courses the student takes)
+        const enrollments = await prisma.enrollment.findMany({
+            where: { studentId },
+            include: {
+                course: {
+                    include: { lecturer: true }
+                }
+            }
+        });
+
+        // 4. Build per-course data
+        // Track which meetingCounts are covered by attendance or leave
+        const courseData = {}; // courseId -> { course, presentMeetings: Set, leaveMeetings: Set, maxMeeting: number, records: [] }
+
+        // Initialize from enrollments
+        for (const enrollment of enrollments) {
+            courseData[enrollment.courseId] = {
+                course: enrollment.course,
+                presentMeetings: new Set(),
+                leaveMeetings: new Set(),
+                maxMeeting: 0,
+                records: [],
+            };
+        }
+
+        // Fill attendance records
+        for (const record of attendanceRecords) {
+            const cid = record.courseId;
+            if (!courseData[cid]) {
+                courseData[cid] = {
+                    course: record.course,
+                    presentMeetings: new Set(),
+                    leaveMeetings: new Set(),
+                    maxMeeting: 0,
+                    records: [],
+                };
+            }
+            courseData[cid].presentMeetings.add(record.meetingCount);
+            if (record.meetingCount > courseData[cid].maxMeeting) {
+                courseData[cid].maxMeeting = record.meetingCount;
+            }
+            courseData[cid].records.push(record);
+        }
+
+        // Fill approved leaves
+        for (const leave of approvedLeaves) {
+            const cid = leave.courseId;
+            if (!courseData[cid]) continue;
+
+            // Assign a meetingCount for this leave
+            courseData[cid].maxMeeting += 1;
+            const meetingNum = courseData[cid].maxMeeting;
+            courseData[cid].leaveMeetings.add(meetingNum);
+
+            courseData[cid].records.push({
+                id: leave.id,
+                status: 'leave',
+                date: leave.date,
+                meetingCount: meetingNum,
+                faceVerified: false,
+                studentId: leave.studentId,
+                courseId: leave.courseId,
+                course: leave.course,
+                createdAt: leave.createdAt,
+                updatedAt: leave.updatedAt,
+            });
+        }
+
+        // 5. Calculate absent meetings
+        // For each course, check meetings from 1..maxMeeting that have no present or leave
+        for (const cid of Object.keys(courseData)) {
+            const cd = courseData[cid];
+            const allCoveredMeetings = new Set([...cd.presentMeetings, ...cd.leaveMeetings]);
+            
+            for (let m = 1; m <= cd.maxMeeting; m++) {
+                if (!allCoveredMeetings.has(m)) {
+                    // This meeting has no record -> absent
+                    // Estimate date based on first attendance record's pattern
+                    const firstRecord = cd.records.find(r => r.meetingCount === 1);
+                    const baseDate = firstRecord ? new Date(firstRecord.date) : new Date();
+                    const estimatedDate = new Date(baseDate);
+                    estimatedDate.setDate(estimatedDate.getDate() + (m - 1) * 7);
+
+                    cd.records.push({
+                        id: `absent-${cid}-${m}`,
+                        status: 'absent',
+                        date: estimatedDate,
+                        meetingCount: m,
+                        faceVerified: false,
+                        studentId: studentId,
+                        courseId: cid,
+                        course: cd.course,
+                        createdAt: estimatedDate,
+                        updatedAt: estimatedDate,
+                    });
+                }
+            }
+        }
+
+        // 6. Merge all records and sort by date descending
+        const combined = Object.values(courseData).flatMap(cd => cd.records);
+        combined.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        res.json(combined);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
