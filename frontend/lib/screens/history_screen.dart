@@ -330,14 +330,52 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               // Mini stats
                               Row(
                                 children: [
-                                  _miniStat('Hadir ${course.presentCount}'),
+                                  _miniStat('Hadir ${course.presentCount}', AppColors.success),
                                   const SizedBox(width: 12),
-                                  _miniStat('Absen ${course.absentCount}'),
+                                  _miniStat('Absen ${course.absentCount}', AppColors.danger),
                                   const SizedBox(width: 12),
-                                  _miniStat('Izin ${course.leaveCount}'),
+                                  _miniStat('Izin ${course.leaveCount}', AppColors.warning),
                                   const Spacer(),
                                   const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
                                 ],
+                              ),
+                              const SizedBox(height: 14),
+                              
+                              // Progress bar
+                              Builder(
+                                builder: (context) {
+                                  final totalRecorded = course.presentCount + course.absentCount + course.leaveCount;
+                                  
+                                  return ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: Container(
+                                      height: 8,
+                                      width: double.infinity,
+                                      color: AppColors.borderLight,
+                                      child: totalRecorded == 0 
+                                          ? null 
+                                          : Row(
+                                              children: [
+                                                if (course.presentCount > 0)
+                                                  Expanded(
+                                                    flex: course.presentCount,
+                                                    child: Container(color: AppColors.success),
+                                                  ),
+                                                if (course.absentCount > 0)
+                                                  Expanded(
+                                                    flex: course.absentCount,
+                                                    child: Container(color: AppColors.danger),
+                                                  ),
+                                                if (course.leaveCount > 0)
+                                                  Expanded(
+                                                    flex: course.leaveCount,
+                                                    child: Container(color: AppColors.warning),
+                                                  ),
+                                              ],
+                                            ),
+                                    ),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -360,24 +398,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _miniStat(String label) {
+  Widget _miniStat(String label, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 6,
-          height: 6,
-          decoration: const BoxDecoration(
-            color: AppColors.textPrimary,
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
             shape: BoxShape.circle,
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 6),
         Text(
           label,
           style: const TextStyle(
             fontSize: AppFonts.small,
-            color: AppColors.textMuted,
+            color: AppColors.textSecondary,
           ),
         ),
       ],

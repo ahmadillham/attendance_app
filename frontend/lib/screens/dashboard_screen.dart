@@ -388,48 +388,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 'Rekap Kehadiran',
                                 style: TextStyle(
                                   fontSize: AppFonts.h3,
-                                  fontWeight: FontWeight.w400,
+                                  fontWeight: FontWeight.w600,
                                   color: AppColors.textPrimary,
-                                  letterSpacing: -0.2,
                                 ),
                               ),
                               Builder(builder: (context) {
                                 final total = stats.present + stats.absent + stats.leave;
                                 final pct = total == 0 ? 0 : (stats.present / total * 100).round();
-                                return Text(
-                                  '$pct%',
-                                  style: const TextStyle(
-                                    fontSize: AppFonts.h3,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary,
+                                final color = pct >= 75 ? AppColors.success : (pct >= 50 ? AppColors.warning : AppColors.danger);
+                                final bgColor = pct >= 75 ? AppColors.successSurface : (pct >= 50 ? AppColors.warningSurface : AppColors.dangerSurface);
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: bgColor,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '$pct%',
+                                    style: TextStyle(
+                                      fontSize: AppFonts.small,
+                                      fontWeight: FontWeight.w600,
+                                      color: color,
+                                    ),
                                   ),
                                 );
                               }),
                             ],
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 16),
+                          // Segmented bar
+                          Builder(builder: (context) {
+                              final totalRecorded = stats.present + stats.absent + stats.leave;
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: Container(
+                                  height: 6,
+                                  width: double.infinity,
+                                  color: AppColors.borderLight,
+                                  child: totalRecorded == 0 
+                                      ? null 
+                                      : Row(
+                                          children: [
+                                            if (stats.present > 0)
+                                              Expanded(
+                                                flex: stats.present,
+                                                child: Container(color: AppColors.success),
+                                              ),
+                                            if (stats.absent > 0)
+                                              Expanded(
+                                                flex: stats.absent,
+                                                child: Container(color: AppColors.danger),
+                                              ),
+                                            if (stats.leave > 0)
+                                              Expanded(
+                                                flex: stats.leave,
+                                                child: Container(color: AppColors.warning),
+                                              ),
+                                          ],
+                                        ),
+                                ),
+                              );
+                          }),
+                          const SizedBox(height: 24),
                           Row(
                             children: [
                               _StatItem(
-                                icon: Icons.check_circle_outline,
+                                icon: Icons.check_circle,
                                 label: 'Hadir',
                                 value: stats.present,
-                                color: AppColors.textSecondary,
-                                bg: AppColors.borderLight,
+                                color: AppColors.success,
+                                bg: AppColors.successSurface,
                               ),
                               _StatItem(
-                                icon: Icons.cancel_outlined,
+                                icon: Icons.cancel,
                                 label: 'Absen',
                                 value: stats.absent,
-                                color: AppColors.textSecondary,
-                                bg: AppColors.borderLight,
+                                color: AppColors.danger,
+                                bg: AppColors.dangerSurface,
                               ),
                               _StatItem(
-                                icon: Icons.description_outlined,
+                                icon: Icons.description,
                                 label: 'Izin',
                                 value: stats.leave,
-                                color: AppColors.textSecondary,
-                                bg: AppColors.borderLight,
+                                color: AppColors.warning,
+                                bg: AppColors.warningSurface,
                               ),
                             ],
                           ),
@@ -667,21 +709,29 @@ class _StatItem extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Icon(icon, size: 22, color: AppColors.textMuted),
-          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 20, color: color),
+          ),
+          const SizedBox(height: 12),
           Text(
             '$value',
             style: const TextStyle(
-              fontSize: AppFonts.h2,
-              fontWeight: FontWeight.w400,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
             label,
             style: const TextStyle(
               fontSize: AppFonts.small,
+              fontWeight: FontWeight.w500,
               color: AppColors.textMuted,
             ),
           ),
