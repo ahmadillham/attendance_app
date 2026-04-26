@@ -99,13 +99,15 @@ class _ManageLeaveScreenState extends State<ManageLeaveScreen> with SingleTicker
 
   Widget _buildLeaveList(List<Map<String, dynamic>> items, {bool showActions = false}) {
     if (items.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.inbox_outlined, size: 64, color: AppColors.textMuted.withValues(alpha: 0.3)),
-            const SizedBox(height: AppSpacing.md),
-            const Text('Tidak ada data perizinan', style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
+            Icon(Icons.assignment_turned_in_outlined, size: 48, color: AppColors.textMuted),
+            SizedBox(height: 12),
+            Text('Tidak ada perizinan', style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
+            SizedBox(height: 4),
+            Text('Data perizinan belum tersedia', style: TextStyle(fontSize: AppFonts.caption, color: AppColors.textMuted)),
           ],
         ),
       );

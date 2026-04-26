@@ -88,8 +88,9 @@ class _LecturerDashboardScreenState extends State<LecturerDashboardScreen> {
                           'Kelas Hari Ini — $today',
                           style: const TextStyle(
                             fontSize: AppFonts.h3,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w400,
                             color: AppColors.textPrimary,
+                            letterSpacing: -0.2,
                           ),
                         ),
                         const SizedBox(height: AppSpacing.sm),
@@ -138,7 +139,7 @@ class _LecturerDashboardScreenState extends State<LecturerDashboardScreen> {
             value,
             style: const TextStyle(
               fontSize: AppFonts.h2,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w400,
               color: AppColors.textPrimary,
             ),
           ),

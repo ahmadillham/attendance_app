@@ -121,7 +121,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
+      body: FadeIndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
@@ -239,7 +239,7 @@ class _LecturerMainScreenState extends State<LecturerMainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
+      body: FadeIndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
@@ -313,6 +313,43 @@ class _LecturerMainScreenState extends State<LecturerMainScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A custom IndexedStack that provides a fade transition when changing tabs.
+class FadeIndexedStack extends StatefulWidget {
+  final int index;
+  final List<Widget> children;
+  final Duration duration;
+
+  const FadeIndexedStack({
+    super.key,
+    required this.index,
+    required this.children,
+    this.duration = const Duration(milliseconds: 250),
+  });
+
+  @override
+  State<FadeIndexedStack> createState() => _FadeIndexedStackState();
+}
+
+class _FadeIndexedStackState extends State<FadeIndexedStack> {
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: List.generate(widget.children.length, (i) {
+        final isActive = i == widget.index;
+        return IgnorePointer(
+          ignoring: !isActive,
+          child: AnimatedOpacity(
+            opacity: isActive ? 1.0 : 0.0,
+            duration: widget.duration,
+            curve: Curves.easeInOut,
+            child: widget.children[i],
+          ),
+        );
+      }),
     );
   }
 }

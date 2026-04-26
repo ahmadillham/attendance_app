@@ -229,7 +229,6 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
 
   Widget _courseCard(Map<String, dynamic> course) {
     final name = course['name'] ?? 'Unknown Course';
-    final code = course['code'] ?? '-';
     final enrollments = course['enrollments'] as List? ?? [];
     final studentCount = enrollments.length;
 
@@ -268,22 +267,6 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        code,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
                     const Icon(Icons.people_outline, size: 12, color: AppColors.textMuted),
                     const SizedBox(width: 4),
                     Text(

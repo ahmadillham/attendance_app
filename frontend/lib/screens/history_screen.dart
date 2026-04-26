@@ -138,25 +138,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ],
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: st['bg'] as Color,
-                              borderRadius: BorderRadius.circular(AppRadius.full),
+                              color: AppColors.borderLight,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(st['icon'] as IconData, size: 14, color: st['color'] as Color),
-                                const SizedBox(width: 4),
-                                Text(
-                                  st['label'] as String,
-                                  style: TextStyle(
-                                    fontSize: AppFonts.small,
-                                    fontWeight: FontWeight.w400,
-                                    color: st['color'] as Color,
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              st['label'] as String,
+                              style: const TextStyle(
+                                fontSize: AppFonts.small,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ),
                         ],
@@ -205,9 +198,36 @@ class _HistoryScreenState extends State<HistoryScreen> {
           if (provider.isLoadingHistory && provider.attendanceHistory == null) {
             return const Center(child: CircularProgressIndicator(color: AppColors.primary));
           } else if (provider.historyError != null && provider.attendanceHistory == null) {
-             return Center(child: Text('Error: ${provider.historyError}'));
+             return Center(
+               child: Padding(
+                 padding: const EdgeInsets.all(32),
+                 child: Column(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+                     const Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.textMuted),
+                     const SizedBox(height: 16),
+                     const Text('Gagal memuat riwayat', style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                     const SizedBox(height: 4),
+                     Text('${provider.historyError}', textAlign: TextAlign.center, style: const TextStyle(fontSize: AppFonts.caption, color: AppColors.textMuted)),
+                     const SizedBox(height: 16),
+                     ElevatedButton(onPressed: () => provider.fetchHistoryData(forceRefresh: true), child: const Text('Coba Lagi')),
+                   ],
+                 ),
+               ),
+             );
           } else if (provider.attendanceHistory == null || provider.attendanceHistory!.isEmpty) {
-             return const Center(child: Text('Tidak ada riwayat kehadiran'));
+             return const Center(
+               child: Column(
+                 mainAxisSize: MainAxisSize.min,
+                 children: [
+                   Icon(Icons.history_outlined, size: 48, color: AppColors.textMuted),
+                   SizedBox(height: 12),
+                   Text('Belum ada riwayat', style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
+                   SizedBox(height: 4),
+                   Text('Riwayat kehadiran Anda akan tampil di sini', style: TextStyle(fontSize: AppFonts.caption, color: AppColors.textMuted)),
+                 ],
+               ),
+             );
           }
 
           final historyList = provider.attendanceHistory!;
@@ -305,45 +325,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               ),
                               const SizedBox(height: 12),
 
-                              // Stacked Progress Bar
-                              Container(
-                                height: 6,
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: AppColors.border,
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: Row(
-                                children: [
-                                  if (course.presentCount > 0)
-                                    Expanded(
-                                      flex: course.presentCount,
-                                      child: Container(color: AppColors.primary),
-                                    ),
-                                  if (course.leaveCount > 0)
-                                    Expanded(
-                                      flex: course.leaveCount,
-                                      child: Container(color: AppColors.primary.withValues(alpha: 0.5)),
-                                    ),
-                                  if (course.absentCount > 0)
-                                    Expanded(
-                                      flex: course.absentCount,
-                                      child: Container(color: AppColors.primary.withValues(alpha: 0.2)),
-                                    ),
-                                ],
-                                ),
-                              ),
-                              const SizedBox(height: 12),
+
 
                               // Mini stats
                               Row(
                                 children: [
-                                  _miniStat(AppColors.primary, 'Hadir ${course.presentCount}'),
+                                  _miniStat('Hadir ${course.presentCount}'),
                                   const SizedBox(width: 12),
-                                  _miniStat(AppColors.primary.withValues(alpha: 0.5), 'Absen ${course.absentCount}'),
+                                  _miniStat('Absen ${course.absentCount}'),
                                   const SizedBox(width: 12),
-                                  _miniStat(AppColors.primary.withValues(alpha: 0.2), 'Izin ${course.leaveCount}'),
+                                  _miniStat('Izin ${course.leaveCount}'),
                                   const Spacer(),
                                   const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
                                 ],
@@ -369,15 +360,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _miniStat(Color dotColor, String label) {
+  Widget _miniStat(String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 6,
           height: 6,
-          decoration: BoxDecoration(
-            color: dotColor,
+          decoration: const BoxDecoration(
+            color: AppColors.textPrimary,
             shape: BoxShape.circle,
           ),
         ),

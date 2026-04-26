@@ -56,7 +56,20 @@ class _CourseAttendanceScreenState extends State<CourseAttendanceScreen> {
           }
 
           final data = provider.courseAttendance;
-          if (data == null) return const Center(child: Text('Tidak ada data'));
+          if (data == null) {
+             return const Center(
+               child: Column(
+                 mainAxisSize: MainAxisSize.min,
+                 children: [
+                   Icon(Icons.inbox_outlined, size: 48, color: AppColors.textMuted),
+                   SizedBox(height: 12),
+                   Text('Tidak ada data', style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
+                   SizedBox(height: 4),
+                   Text('Data absensi kelas belum tersedia', style: TextStyle(fontSize: AppFonts.caption, color: AppColors.textMuted)),
+                 ],
+               ),
+             );
+          }
 
           final enrollments = data['enrollments'] as List? ?? [];
           final attendances = data['attendances'] as List? ?? [];

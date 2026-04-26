@@ -62,13 +62,7 @@ router.get('/dashboard', async (req, res) => {
         // Count pending leave requests
         const pendingLeaveCount = await prisma.leaveRequest.count({
             where: {
-                student: {
-                    enrollments: {
-                        some: {
-                            course: { lecturerId },
-                        },
-                    },
-                },
+                course: { lecturerId },
                 status: 'PENDING',
             },
         });

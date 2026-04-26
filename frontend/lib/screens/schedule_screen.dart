@@ -221,10 +221,43 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                       child: Row(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
+                                          // Time column with timeline
+                                          SizedBox(
+                                            width: 52,
+                                            child: Column(
+                                              children: [
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  item.time.split(' – ')[0],
+                                                  style: const TextStyle(
+                                                    fontSize: AppFonts.small,
+                                                    fontWeight: FontWeight.w400,
+                                                    color: AppColors.textSecondary,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Container(
+                                                  width: 10,
+                                                  height: 10,
+                                                  decoration: const BoxDecoration(
+                                                    color: AppColors.textMuted,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                ),
+                                                if (index < daySchedule.length - 1)
+                                                  Container(
+                                                    width: 2,
+                                                    height: 60,
+                                                    margin: const EdgeInsets.only(top: 4),
+                                                    color: AppColors.border,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
                                           // Card content
                                           Expanded(
                                             child: Container(
-                                              margin: const EdgeInsets.only(left: 10, bottom: 10),
+                                              margin: const EdgeInsets.only(left: 8, bottom: 10),
                                               padding: const EdgeInsets.all(16),
                                               decoration: BoxDecoration(
                                                 color: AppColors.surface,

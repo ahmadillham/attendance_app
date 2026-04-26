@@ -484,271 +484,267 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           value: SystemUiOverlayStyle.light.copyWith(
             statusBarColor: Colors.transparent,
           ),
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Logo & Title
-                  FadeTransition(
-                    opacity: _fadeAnim,
-                    child: SlideTransition(
-                      position: _slideAnim,
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.school,
-                              size: 32,
-                              color: AppColors.white,
+          child: Column(
+            children: [
+              // Blue Header Area
+              Container(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 40,
+                  bottom: 30,
+                  left: 24,
+                  right: 24,
+                ),
+                width: double.infinity,
+                child: FadeTransition(
+                  opacity: _fadeAnim,
+                  child: SlideTransition(
+                    position: _slideAnim,
+                    child: Column(
+                      children: [
+                        // Logo
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
                             ),
                           ),
-                          const SizedBox(height: 24),
-                          const Text(
-                            'Absensi Kuliah',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.white,
-                              letterSpacing: -0.5,
-                            ),
+                          child: const Icon(
+                            Icons.school,
+                            size: 32,
+                            color: AppColors.white,
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Masuk ke akun Anda',
-                            style: TextStyle(
-                              fontSize: AppFonts.body,
-                              color: Colors.white.withValues(alpha: 0.65),
-                            ),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'Absensi Kuliah',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.white,
+                            letterSpacing: -0.5,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Sistem Presensi Pintar',
+                          style: TextStyle(
+                            fontSize: AppFonts.caption,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.white.withValues(alpha: 0.8),
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                ),
+              ),
 
-                  const SizedBox(height: 48),
-
-                  // Form Area (Card)
-                  FadeTransition(
-                    opacity: _fadeAnim,
-                    child: SlideTransition(
-                      position: _slideAnim,
-                      child: Container(
-                        key: _formCardKey,
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppRadius.xl),
-                          boxShadow: AppShadows.medium,
-                        ),
-                        child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // NIM / NIDN Input
-                                _buildInputField(
-                                  controller: _nimController,
-                                  placeholder: 'NIM / NIDN',
-                                  isFocused: _nimFocused,
-                                  onFocusChange: (f) => setState(() => _nimFocused = f),
-                                  keyboardType: TextInputType.number,
-                                  onSubmitted: (_) => _passwordFocus.requestFocus(),
-                                ),
-
-                                const SizedBox(height: 18),
-
-                                // Password Input
-                                _buildInputField(
-                                  controller: _passwordController,
-                                  placeholder: 'Password',
-                                  isFocused: _pwFocused,
-                                  onFocusChange: (f) => setState(() => _pwFocused = f),
-                                  isPassword: true,
-                                  focusNode: _passwordFocus,
-                                  onSubmitted: (_) => _handleLogin(),
-                                ),
-
-                                const SizedBox(height: 20),
-
-                                // Login Button
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(AppRadius.md),
+              // White Bottom Sheet Area
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(36),
+                      topRight: Radius.circular(36),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(36),
+                      topRight: Radius.circular(36),
+                    ),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(28, 40, 28, 32),
+                      child: FadeTransition(
+                        opacity: _fadeAnim,
+                        child: SlideTransition(
+                          position: _slideAnim,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Form Area
+                              Container(
+                                key: _formCardKey,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // NIM / NIDN Input
+                                    _buildInputField(
+                                      controller: _nimController,
+                                      label: 'NIM / NIDN',
+                                      placeholder: 'Masukkan NIM atau NIDN',
+                                      isFocused: _nimFocused,
+                                      onFocusChange: (f) => setState(() => _nimFocused = f),
+                                      keyboardType: TextInputType.number,
+                                      onSubmitted: (_) => _passwordFocus.requestFocus(),
                                     ),
-                                    child: ElevatedButton(
-                                      onPressed: _isLoading ? null : () => _handleLogin(),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primary,
-                                        disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.75),
-                                        foregroundColor: AppColors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(AppRadius.md),
+                                    const SizedBox(height: 20),
+
+                                    // Password Input
+                                    _buildInputField(
+                                      controller: _passwordController,
+                                      label: 'Password',
+                                      placeholder: '••••••••',
+                                      isFocused: _pwFocused,
+                                      onFocusChange: (f) => setState(() => _pwFocused = f),
+                                      isPassword: true,
+                                      focusNode: _passwordFocus,
+                                      onSubmitted: (_) => _handleLogin(),
+                                    ),
+                                    const SizedBox(height: 32),
+
+                                    // Login Button
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        onPressed: _isLoading ? null : () => _handleLogin(),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.primary,
+                                          disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.75),
+                                          foregroundColor: AppColors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 18),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          elevation: 0,
                                         ),
-                                        elevation: 0,
-                                      ),
-                                      child: _isLoading
-                                          ? const Text(
-                                              'Memproses…',
-                                              style: TextStyle(
-                                                fontSize: AppFonts.body,
-                                                fontWeight: FontWeight.w400,
-                                              ),
-                                            )
-                                          : const Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                Text(
-                                                  'Masuk',
-                                                  style: TextStyle(
-                                                    fontSize: AppFonts.body,
-                                                    fontWeight: FontWeight.w400,
-                                                  ),
+                                        child: _isLoading
+                                            ? const SizedBox(
+                                                height: 20,
+                                                width: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: Colors.white,
                                                 ),
-                                                SizedBox(width: 8),
-                                                Icon(Icons.arrow_forward, size: 18),
-                                              ],
-                                            ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Biometric Login
-                                if (_biometricAvailable) ...[
-                                  const SizedBox(height: 20),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: OutlinedButton(
-                                      onPressed: _handleBiometricLogin,
-                                      style: OutlinedButton.styleFrom(
-                                        backgroundColor: AppColors.background,
-                                        side: const BorderSide(
-                                          color: AppColors.border,
-                                          width: 1.5,
-                                        ),
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(AppRadius.md),
-                                        ),
+                                              )
+                                            : const Text(
+                                                'Masuk',
+                                                style: TextStyle(
+                                                  fontSize: AppFonts.body,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
                                       ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                    ),
+                                    const SizedBox(height: 24),
+
+                                    // Biometric OR line
+                                    if (_biometricAvailable) ...[
+                                      const SizedBox(height: 16),
+                                      Row(
                                         children: [
-                                          Container(
-                                            width: 40,
-                                            height: 40,
-                                            decoration: BoxDecoration(
-                                              color: AppColors.primarySurface,
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Icon(
-                                              _getBiometricIcon(),
-                                              size: 24,
-                                              color: AppColors.primary,
+                                          Expanded(child: Divider(color: AppColors.borderLight)),
+                                          const Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: 16),
+                                            child: Text(
+                                              'Atau masuk dengan',
+                                              style: TextStyle(
+                                                fontSize: AppFonts.caption,
+                                                color: AppColors.textMuted,
+                                              ),
                                             ),
                                           ),
-                                          const SizedBox(width: 10),
-                                          Text(
-                                            'Masuk dengan ${_getBiometricLabel()}',
-                                            style: const TextStyle(
-                                              fontSize: AppFonts.body,
-                                              fontWeight: FontWeight.w400,
-                                              color: AppColors.textPrimary,
+                                          Expanded(child: Divider(color: AppColors.borderLight)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 24),
+
+                                      // Biometric Button
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          InkWell(
+                                            onTap: _handleBiometricLogin,
+                                            borderRadius: BorderRadius.circular(16),
+                                            child: Container(
+                                              width: 64,
+                                              height: 64,
+                                              decoration: BoxDecoration(
+                                                color: AppColors.background,
+                                                borderRadius: BorderRadius.circular(16),
+                                                border: Border.all(color: AppColors.borderLight),
+                                              ),
+                                              child: Icon(
+                                                _getBiometricIcon(),
+                                                size: 32,
+                                                color: AppColors.primary,
+                                              ),
                                             ),
                                           ),
                                         ],
                                       ),
+                                    ],
+
+                                    const SizedBox(height: 48),
+
+                                    // Dev Mode: Quick Login
+                                    Center(
+                                      child: Column(
+                                        children: [
+                                          const Text(
+                                            'Dev Mode: Quick Login',
+                                            style: TextStyle(
+                                              fontSize: AppFonts.caption,
+                                              color: AppColors.textMuted,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              _buildRoleDropdown(
+                                                title: 'Mahasiswa',
+                                                items: [
+                                                  {'name': 'Ahmad Bahrudin', 'id': '241101052'},
+                                                ],
+                                              ),
+                                              const SizedBox(width: 12),
+                                              _buildRoleDropdown(
+                                                title: 'Dosen',
+                                                items: [
+                                                  {'name': 'Dr. Mivan Ariful', 'id': '198501012001'},
+                                                  {'name': 'M. Jauhar Fikri', 'id': '198501012002'},
+                                                  {'name': 'Guruh Putro D', 'id': '198501012003'},
+                                                  {'name': 'Zakki Alawi', 'id': '198501012004'},
+                                                  {'name': 'Dwi Issadari', 'id': '198501012005'},
+                                                  {'name': 'Mula Agung', 'id': '198501012006'},
+                                                  {'name': 'Afnil Efan Pajri', 'id': '198501012007'},
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ],
-                            ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-
-                      const SizedBox(height: 32),
-
-                      // Dev Mode: Quick Login
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              'Dev Mode: Quick Login',
-                              style: TextStyle(
-                                fontSize: AppFonts.caption,
-                                color: Colors.white.withValues(alpha: 0.8),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _buildRoleDropdown(
-                                  title: 'Mahasiswa',
-                                  items: [
-                                    {'name': 'Ahmad Bahrudin', 'id': '241101052'},
-                                  ],
-                                ),
-                                const SizedBox(width: 12),
-                                _buildRoleDropdown(
-                                  title: 'Dosen',
-                                  items: [
-                                    {'name': 'Dr. Mivan Ariful', 'id': '198501012001'},
-                                    {'name': 'M. Jauhar Fikri', 'id': '198501012002'},
-                                    {'name': 'Guruh Putro D', 'id': '198501012003'},
-                                    {'name': 'Zakki Alawi', 'id': '198501012004'},
-                                    {'name': 'Dwi Issadari', 'id': '198501012005'},
-                                    {'name': 'Mula Agung', 'id': '198501012006'},
-                                    {'name': 'Afnil Efan Pajri', 'id': '198501012007'},
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Footer
-                      Text(
-                        '© 2026 Universitas Nahdlatul Ulama Sunan Giri',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: AppFonts.small,
-                          color: Colors.white.withValues(alpha: 0.4),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        );
+        ),
+      ),
+    );
   }
 
   Widget _buildInputField({
     required TextEditingController controller,
+    required String label,
     required String placeholder,
     required bool isFocused,
     required ValueChanged<bool> onFocusChange,
@@ -757,53 +753,61 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     TextInputType? keyboardType,
     ValueChanged<String>? onSubmitted,
   }) {
-    return Focus(
-      onFocusChange: onFocusChange,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: AppColors.borderLight,
-            width: 1,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: AppFonts.caption,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
           ),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                keyboardType: keyboardType,
-                obscureText: isPassword && !_showPassword,
-                onSubmitted: onSubmitted,
-                style: const TextStyle(
-                  fontSize: AppFonts.body,
-                  color: AppColors.textPrimary,
-                ),
-                decoration: InputDecoration(
-                  hintText: placeholder,
-                  hintStyle: const TextStyle(color: AppColors.textMuted),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                ),
-              ),
+        TextField(
+          controller: controller,
+          focusNode: focusNode,
+          keyboardType: keyboardType,
+          obscureText: isPassword && !_showPassword,
+          onSubmitted: onSubmitted,
+          style: const TextStyle(
+            fontSize: AppFonts.body,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
+          decoration: InputDecoration(
+            hintText: placeholder,
+            hintStyle: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w400),
+            filled: true,
+            fillColor: AppColors.white,
+            contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.borderLight, width: 1.5),
             ),
-            if (isPassword)
-              GestureDetector(
-                onTap: () => setState(() => _showPassword = !_showPassword),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                  child: Icon(
-                    _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                    size: 20,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ),
-          ],
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            ),
+            suffixIcon: isPassword
+                ? GestureDetector(
+                    onTap: () => setState(() => _showPassword = !_showPassword),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Icon(
+                        _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        size: 22,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  )
+                : null,
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -815,7 +819,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         _handleLogin();
       },
       color: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       itemBuilder: (BuildContext context) {
         return items.map((item) {
           return PopupMenuItem<String>(
@@ -827,7 +831,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   item['name']!,
                   style: const TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -844,17 +848,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         }).toList();
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderLight),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -863,12 +861,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               title,
               style: const TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.arrow_drop_down, color: AppColors.primary, size: 18),
+            const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary, size: 18),
           ],
         ),
       ),

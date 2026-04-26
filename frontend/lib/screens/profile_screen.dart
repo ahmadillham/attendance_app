@@ -253,9 +253,72 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _infoCard([
                       _InfoRowData(Icons.school_outlined, 'Program Studi', student.department),
                       _InfoRowData(Icons.business_outlined, 'Fakultas', student.faculty),
-                      _InfoRowData(Icons.layers_outlined, 'Semester', 'Semester ${student.semester}'),
-                      _InfoRowData(Icons.bar_chart_outlined, 'Kehadiran', '$attendancePercent%', isLast: true),
+                      _InfoRowData(Icons.layers_outlined, 'Semester', 'Semester ${student.semester}', isLast: true),
                     ]),
+
+                    // Attendance Ring Card
+                    const SectionLabel('REKAP KEHADIRAN'),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        boxShadow: AppShadows.card,
+                      ),
+                      child: Row(
+                        children: [
+                          // Circular Progress
+                          SizedBox(
+                            width: 72,
+                            height: 72,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 72,
+                                  height: 72,
+                                  child: CircularProgressIndicator(
+                                    value: attendancePercent / 100.0,
+                                    strokeWidth: 6,
+                                    backgroundColor: AppColors.borderLight,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      attendancePercent >= 75
+                                          ? AppColors.success
+                                          : attendancePercent >= 50
+                                              ? AppColors.warning
+                                              : AppColors.danger,
+                                    ),
+                                    strokeCap: StrokeCap.round,
+                                  ),
+                                ),
+                                Text(
+                                  '$attendancePercent%',
+                                  style: const TextStyle(
+                                    fontSize: AppFonts.h3,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          // Stats breakdown
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _attendanceStat('Hadir', student.attendanceSummary.present),
+                                const SizedBox(height: 8),
+                                _attendanceStat('Absen', student.attendanceSummary.absent),
+                                const SizedBox(height: 8),
+                                _attendanceStat('Izin', student.attendanceSummary.leave),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                     const SectionLabel('INFORMASI KONTAK'),
                     _infoCard([
@@ -396,6 +459,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _attendanceStat(String label, int value) {
+    return Row(
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: const BoxDecoration(
+            color: AppColors.textPrimary,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: AppFonts.caption,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        Text(
+          '$value',
+          style: const TextStyle(
+            fontSize: AppFonts.body,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary,
+          ),
+        ),
+      ],
     );
   }
 

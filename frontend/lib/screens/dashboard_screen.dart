@@ -41,9 +41,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (provider.isLoadingDashboard && provider.dashboardData == null) {
             return const Center(child: CircularProgressIndicator(color: AppColors.primary));
           } else if (provider.dashboardError != null && provider.dashboardData == null) {
-             return Center(child: Text('Error: ${provider.dashboardError}'));
+             return Center(
+               child: Padding(
+                 padding: const EdgeInsets.all(32),
+                 child: Column(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+                     const Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.textMuted),
+                     const SizedBox(height: 16),
+                     const Text('Gagal memuat data', style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                     const SizedBox(height: 4),
+                     Text('${provider.dashboardError}', textAlign: TextAlign.center, style: const TextStyle(fontSize: AppFonts.caption, color: AppColors.textMuted)),
+                     const SizedBox(height: 16),
+                     ElevatedButton(onPressed: () => provider.fetchDashboardData(forceRefresh: true), child: const Text('Coba Lagi')),
+                   ],
+                 ),
+               ),
+             );
           } else if (provider.dashboardData == null) {
-             return const Center(child: Text('Tidak ada data didapat'));
+             return const Center(
+               child: Column(
+                 mainAxisSize: MainAxisSize.min,
+                 children: [
+                   Icon(Icons.inbox_outlined, size: 48, color: AppColors.textMuted),
+                   SizedBox(height: 12),
+                   Text('Tidak ada data', style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
+                   SizedBox(height: 4),
+                   Text('Data dashboard belum tersedia', style: TextStyle(fontSize: AppFonts.caption, color: AppColors.textMuted)),
+                 ],
+               ),
+             );
           }
 
           final student = provider.dashboardData!.student;
@@ -354,9 +381,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       child: Column(
                         children: [
-                          const Row(
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
+                              const Text(
                                 'Rekap Kehadiran',
                                 style: TextStyle(
                                   fontSize: AppFonts.h3,
@@ -365,6 +393,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   letterSpacing: -0.2,
                                 ),
                               ),
+                              Builder(builder: (context) {
+                                final total = stats.present + stats.absent + stats.leave;
+                                final pct = total == 0 ? 0 : (stats.present / total * 100).round();
+                                return Text(
+                                  '$pct%',
+                                  style: const TextStyle(
+                                    fontSize: AppFonts.h3,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                );
+                              }),
                             ],
                           ),
                           const SizedBox(height: 18),
