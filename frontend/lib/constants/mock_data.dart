@@ -25,10 +25,10 @@ const mockStudent = Student(
   phone: '0812-2001-2661',
   avatarInitials: 'AB',
   attendanceSummary: AttendanceSummary(
-    present: 98,
-    absent: 0,
+    present: 61,
+    absent: 9,
     leave: 0,
-    total: 98,
+    total: 70,
   ),
 );
 
@@ -53,60 +53,69 @@ const Map<String, List<ScheduleItem>> mockWeeklySchedule = {
 };
 
 // ─── Mock Attendance History ─────────────────────────────────────
+// Tanggal dimulai dari Senin 2 Februari 2026, setiap mata kuliah
+// mengikuti hari jadwalnya dan berlangsung selama 10 pertemuan.
 final List<CourseAttendance> mockAttendanceHistory = [
+  // Senin - Logika Matematika (mulai 2 Feb 2026, Senin)
   CourseAttendance(
     subject: 'Logika Matematika',
     lecturer: 'Dr. Mivan Ariful Fathoni, M.Si',
-    totalMeetings: 14,
-    records: List.generate(14, (i) => AttendanceRecord(
+    totalMeetings: 10,
+    records: List.generate(10, (i) => AttendanceRecord(
       date: _generateDate(2026, 2, 2, i), meeting: i + 1, status: 'present',
     )),
   ),
+  // Senin - ADPL (mulai 2 Feb 2026, Senin)
   CourseAttendance(
     subject: 'Analisis Dan Desain Perangkat Lunak',
     lecturer: 'Muhammad Jauhar Fikri, S.Kom., M.Kom',
-    totalMeetings: 14,
-    records: List.generate(14, (i) => AttendanceRecord(
+    totalMeetings: 10,
+    records: List.generate(10, (i) => AttendanceRecord(
       date: _generateDate(2026, 2, 2, i), meeting: i + 1, status: 'present',
     )),
   ),
+  // Senin - Pemrograman Mikrokontroller (mulai 2 Feb 2026, Senin)
   CourseAttendance(
     subject: 'Pemrograman Mikrokontroller',
     lecturer: 'Guruh Putro Digantoro, S.Kom., M.Kom',
-    totalMeetings: 14,
-    records: List.generate(14, (i) => AttendanceRecord(
+    totalMeetings: 10,
+    records: List.generate(10, (i) => AttendanceRecord(
       date: _generateDate(2026, 2, 2, i), meeting: i + 1, status: 'present',
     )),
   ),
+  // Selasa - Pemrograman Berbasis Mobile (mulai 3 Feb 2026, Selasa)
   CourseAttendance(
     subject: 'Pemrograman Berbasis Mobile',
     lecturer: 'Zakki Alawi, S.Kom., MM',
-    totalMeetings: 14,
-    records: List.generate(14, (i) => AttendanceRecord(
+    totalMeetings: 10,
+    records: List.generate(10, (i) => AttendanceRecord(
       date: _generateDate(2026, 2, 3, i), meeting: i + 1, status: 'present',
     )),
   ),
+  // Selasa - IMK (mulai 3 Feb 2026, Selasa)
   CourseAttendance(
     subject: 'Interaksi Manusia & Komputer',
     lecturer: 'Dwi Issadari Hastuti, S.Pd., S.Kom., M.Kom',
-    totalMeetings: 14,
-    records: List.generate(14, (i) => AttendanceRecord(
+    totalMeetings: 10,
+    records: List.generate(10, (i) => AttendanceRecord(
       date: _generateDate(2026, 2, 3, i), meeting: i + 1, status: 'present',
     )),
   ),
+  // Kamis - IoT (mulai 5 Feb 2026, Kamis)
   CourseAttendance(
     subject: 'Internet Of Things',
     lecturer: 'Mula Agung Barata, S.ST., M.Kom',
-    totalMeetings: 14,
-    records: List.generate(14, (i) => AttendanceRecord(
+    totalMeetings: 10,
+    records: List.generate(10, (i) => AttendanceRecord(
       date: _generateDate(2026, 2, 5, i), meeting: i + 1, status: 'present',
     )),
   ),
+  // Kamis - Komparsis (mulai 5 Feb 2026, Kamis)
   CourseAttendance(
     subject: 'Komputasi Paralel Dan Terdistribusi',
     lecturer: 'Afnil Efan Pajri, S.Kom., M.I.Kom',
-    totalMeetings: 14,
-    records: List.generate(14, (i) => AttendanceRecord(
+    totalMeetings: 10,
+    records: List.generate(10, (i) => AttendanceRecord(
       date: _generateDate(2026, 2, 5, i), meeting: i + 1, status: 'present',
     )),
   ),

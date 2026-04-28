@@ -427,8 +427,7 @@ router.get('/history', authMiddleware, studentMiddleware, async (req, res) => {
 
                     const firstRecord = cd.records.find(r => r.meetingCount === 1);
                     const baseDate = firstRecord ? new Date(firstRecord.date) : new Date();
-                    const estimatedDate = new Date(baseDate);
-                    estimatedDate.setDate(estimatedDate.getDate() + (m - 1) * 7);
+                    const estimatedDate = new Date(baseDate.getTime() + (m - 1) * 7 * 24 * 60 * 60 * 1000);
 
                     cd.records.push({
                         id: `absent-${cid}-${m}`,

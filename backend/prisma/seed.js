@@ -139,26 +139,41 @@ async function main() {
   });
   console.log(`✅ Jadwal Mingguan Tersimpan (7 slot)`);
 
-  // 8. Sample Attendance Records (Pertemuan 1-8, beberapa absen/tidak hadir)
+  // 8. Sample Attendance Records (Pertemuan 1-10, beberapa absen/tidak hadir)
   await prisma.attendance.deleteMany({ where: { studentId: student.id } });
   const attendanceData = [];
 
+  // Tanggal awal per mata kuliah sesuai hari jadwalnya
+  // Senin 2 Feb 2026, Selasa 3 Feb 2026, Kamis 5 Feb 2026
+  const courseStartDays = {
+    0: 2,  // Logika Matematika → Senin 2 Feb
+    1: 2,  // ADPL → Senin 2 Feb
+    2: 2,  // Pemrograman Mikrokontroller → Senin 2 Feb
+    3: 3,  // Pemrograman Berbasis Mobile → Selasa 3 Feb
+    4: 3,  // IMK → Selasa 3 Feb
+    5: 5,  // IoT → Kamis 5 Feb
+    6: 5,  // Komparsis → Kamis 5 Feb
+  };
+
   // Definisikan pola kehadiran per mata kuliah (true = hadir, false = tidak hadir/absen)
   const attendancePatterns = {
-    0: [true, true, true, false, true, true, false, true],      // MK 1: 6 hadir, 2 absen
-    1: [true, true, true, true, true, false, true, true],       // MK 2: 7 hadir, 1 absen
-    2: [true, false, true, true, true, true, false, false],     // MK 3: 5 hadir, 3 absen
-    3: [true, true, true, true, true, true, true, true],        // MK 4: 8 hadir (sempurna)
-    4: [true, true, false, true, true, true, true, true],       // MK 5: 7 hadir, 1 absen
-    5: [true, true, true, true, false, true, true, true],       // MK 6: 7 hadir, 1 absen
-    6: [true, true, true, true, true, true, false, true],       // MK 7: 7 hadir, 1 absen
+    0: [true, true, true, false, true, true, false, true, true, true],      // MK 1: 8 hadir, 2 absen
+    1: [true, true, true, true, true, false, true, true, true, true],       // MK 2: 9 hadir, 1 absen
+    2: [true, false, true, true, true, true, false, false, true, true],     // MK 3: 7 hadir, 3 absen
+    3: [true, true, true, true, true, true, true, true, true, true],        // MK 4: 10 hadir (sempurna)
+    4: [true, true, false, true, true, true, true, true, true, true],       // MK 5: 9 hadir, 1 absen
+    5: [true, true, true, true, false, true, true, true, true, true],       // MK 6: 9 hadir, 1 absen
+    6: [true, true, true, true, true, true, false, true, true, true],       // MK 7: 9 hadir, 1 absen
   };
 
   for (let ci = 0; ci < courses.length; ci++) {
-    const pattern = attendancePatterns[ci] || Array(8).fill(true);
-    for (let meeting = 1; meeting <= 8; meeting++) {
+    const pattern = attendancePatterns[ci] || Array(10).fill(true);
+    const startDay = courseStartDays[ci] || 2;
+    for (let meeting = 1; meeting <= 10; meeting++) {
       if (pattern[meeting - 1]) {
-        const date = new Date(2026, 1, 2 + (meeting - 1) * 7); // weekly
+        // Gunakan jam 12 siang (noon) agar tidak bergeser hari saat konversi UTC
+        const day = startDay + (meeting - 1) * 7;
+        const date = new Date(Date.UTC(2026, 1, day, 5, 0, 0)); // 05:00 UTC = 12:00 WIB
         attendanceData.push({
           status: 'present',
           meetingCount: meeting,
@@ -171,8 +186,8 @@ async function main() {
     }
   }
   await prisma.attendance.createMany({ data: attendanceData });
-  const absentCount = courses.length * 8 - attendanceData.length;
-  console.log(`✅ Sample Attendance: ${attendanceData.length} hadir + ${absentCount} absen (8 pertemuan × 7 MK)`);
+  const absentCount = courses.length * 10 - attendanceData.length;
+  console.log(`✅ Sample Attendance: ${attendanceData.length} hadir + ${absentCount} absen (10 pertemuan × 7 MK)`);
 
   console.log('🌲 Seeding database selesai seluruhnya!');
 }
