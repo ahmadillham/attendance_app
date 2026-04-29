@@ -41,7 +41,10 @@ router.post('/', authMiddleware, studentMiddleware, upload.single('document'), a
 
         const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         const leaveDayName = dayNames[leaveDate.getDay()];
-        const now = new Date();
+
+        // Use clientTime for dev/testing (mock time support), fallback to server time
+        // TODO: In production, always use server time: new Date()
+        const now = req.body.clientTime ? new Date(req.body.clientTime) : new Date();
 
         const isToday = leaveDate.getFullYear() === now.getFullYear()
             && leaveDate.getMonth() === now.getMonth()

@@ -5,6 +5,7 @@ import '../../providers/lecturer_provider.dart';
 import '../../services/api_service.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/section_label.dart';
+import '../../widgets/app_alert.dart';
 
 /// Lecturer Profile — shows NIP, courses, change password, logout
 class LecturerProfileScreen extends StatefulWidget {
@@ -430,15 +431,13 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
   }
 
   void _showAlert(String title, String message) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
-        ],
-      ),
+    final isSuccess = title.contains('Berhasil');
+    final cleanTitle = title.replaceAll(RegExp(r'[✅❌]\s*'), '');
+    AppAlert.show(
+      context,
+      title: cleanTitle,
+      message: message,
+      type: isSuccess ? AlertType.success : AlertType.error,
     );
   }
 
@@ -480,29 +479,19 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
   }
 
   void _handleLogout() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ApiService.clearToken();
-              if (mounted) {
-                Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (_) => false);
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-            child: const Text('Keluar'),
-          ),
-        ],
-      ),
+    AppAlert.confirm(
+      context,
+      title: 'Keluar',
+      message: 'Apakah Anda yakin ingin keluar dari aplikasi?',
+      confirmText: 'Keluar',
+      confirmColor: AppColors.danger,
+      icon: Icons.logout_rounded,
+      onConfirm: () async {
+        await ApiService.clearToken();
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (_) => false);
+        }
+      },
     );
   }
 }

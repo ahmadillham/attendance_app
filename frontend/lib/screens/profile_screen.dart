@@ -6,6 +6,7 @@ import '../constants/mock_data.dart';
 import '../services/api_service.dart';
 import '../providers/app_provider.dart';
 import '../widgets/section_label.dart';
+import '../widgets/app_alert.dart';
 
 /// ProfileScreen — Academic info, settings, logout
 class ProfileScreen extends StatefulWidget {
@@ -129,42 +130,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _handleLogout() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ApiService.clearToken();
-              if (!context.mounted) return;
-              context.read<AppProvider>().clearData();
-              Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (_) => false);
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-            child: const Text('Keluar'),
-          ),
-        ],
-      ),
+    AppAlert.confirm(
+      context,
+      title: 'Keluar',
+      message: 'Apakah Anda yakin ingin keluar dari aplikasi?',
+      confirmText: 'Keluar',
+      confirmColor: AppColors.danger,
+      icon: Icons.logout_rounded,
+      onConfirm: () async {
+        await ApiService.clearToken();
+        if (!context.mounted) return;
+        context.read<AppProvider>().clearData();
+        Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (_) => false);
+      },
     );
   }
 
   void _showAlert(String title, String message) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
-        ],
-      ),
+    final isSuccess = title.contains('Berhasil');
+    final cleanTitle = title.replaceAll(RegExp(r'[✅❌]\s*'), '');
+    AppAlert.show(
+      context,
+      title: cleanTitle,
+      message: message,
+      type: isSuccess ? AlertType.success : AlertType.error,
     );
   }
 

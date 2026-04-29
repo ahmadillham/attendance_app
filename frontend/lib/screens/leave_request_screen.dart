@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../constants/theme.dart';
 import '../widgets/screen_header.dart';
 import '../widgets/section_label.dart';
+import '../widgets/app_alert.dart';
 import '../services/api_service.dart';
 import '../services/app_time.dart';
 import '../providers/app_provider.dart';
@@ -145,8 +146,10 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal memilih dokumen.')),
+        AppAlert.toast(
+          context,
+          message: 'Gagal memilih dokumen.',
+          type: AlertType.error,
         );
       }
     }
@@ -204,20 +207,82 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
   }
 
   void _showAlert(String title, String message, {VoidCallback? onDismiss}) {
-    showDialog(
+    // Determine if this is a success alert
+    final bool isSuccess = title.contains('Berhasil');
+    final cleanTitle = title.replaceAll(RegExp(r'[✅❌]\s*'), '');
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              onDismiss?.call();
-            },
-            child: Text(onDismiss != null ? 'Kembali' : 'OK'),
-          ),
-        ],
+      backgroundColor: Colors.transparent,
+      isDismissible: !isSuccess, // Prevent dismissing success by tapping outside
+      builder: (ctx) => Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: AppShadows.medium,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: isSuccess ? AppColors.accentSurface : AppColors.dangerSurface,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                isSuccess ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+                size: 36,
+                color: isSuccess ? AppColors.accent : AppColors.danger,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              cleanTitle,
+              style: const TextStyle(
+                fontSize: AppFonts.h3,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: AppFonts.body,
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  onDismiss?.call();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isSuccess ? AppColors.accent : AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  onDismiss != null ? 'Kembali ke Dashboard' : 'Mengerti',
+                  style: const TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

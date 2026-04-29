@@ -31,6 +31,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
   bool _cameraPermissionPermanent = false;
   bool _locationPermissionDenied = false;
   bool _locationPermissionPermanent = false;
+  bool _locationServiceDisabled = false;
   bool _mockLocationDetected = false;
   bool _locationError = false;
 
@@ -174,9 +175,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (mounted) setState(() => _locationPermissionDenied = true);
+        if (mounted) {
+          setState(() {
+            _locationServiceDisabled = true;
+            _locationPermissionDenied = false;
+          });
+        }
         return;
       }
+
+      // GPS service is on, clear the disabled flag
+      if (mounted) setState(() => _locationServiceDisabled = false);
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -411,6 +420,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
         desc: 'Aplikasi "Fake GPS" terdeteksi. Nonaktifkan lokasi palsu lalu coba lagi.',
         buttonText: 'Coba Lagi',
         onPressed: _initLocation,
+      );
+    }
+
+    // GPS/Location service is turned off
+    if (_locationServiceDisabled) {
+      return _buildPermissionScreen(
+        icon: Icons.location_disabled,
+        title: 'GPS Tidak Aktif',
+        desc: 'Layanan lokasi (GPS) perangkat Anda belum diaktifkan. Aktifkan GPS terlebih dahulu untuk melanjutkan.',
+        buttonText: 'Aktifkan GPS',
+        onPressed: () async {
+          await Geolocator.openLocationSettings();
+          // Re-check after user returns from settings
+          await Future.delayed(const Duration(seconds: 1));
+          if (mounted) _initLocation();
+        },
       );
     }
 

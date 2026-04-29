@@ -4,6 +4,7 @@ import 'package:local_auth/local_auth.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../services/app_time.dart';
+import '../widgets/app_alert.dart';
 
 /// LoginScreen — Modern Clean Design
 /// ─────────────────────────────────────────────
@@ -27,6 +28,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   bool _showPassword = false;
   bool _isLoading = false;
   bool _nimFocused = false;
+  String? _nimError;
+  String? _pwError;
   bool _pwFocused = false;
   bool _biometricAvailable = false;
   String? _biometricType; // 'fingerprint' | 'face' | 'iris'
@@ -155,8 +158,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Terjadi kesalahan saat autentikasi biometrik.')),
+        ScaffoldMessenger.of(context).clearSnackBars();
+        AppAlert.toast(
+          context,
+          message: 'Terjadi kesalahan saat autentikasi biometrik.',
+          type: AlertType.error,
         );
       }
     }
@@ -166,14 +172,22 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final nim = _nimController.text.trim();
     final password = _passwordController.text.trim();
 
+    // Inline validation
+    bool hasError = false;
+    setState(() {
+      _nimError = null;
+      _pwError = null;
+    });
+
     if (nim.isEmpty) {
-      _showAlert('Peringatan', 'Masukkan NIM / NIDN Anda.');
-      return;
+      setState(() => _nimError = 'NIM / NIDN tidak boleh kosong');
+      hasError = true;
     }
     if (password.isEmpty) {
-      _showAlert('Peringatan', 'Masukkan password Anda.');
-      return;
+      setState(() => _pwError = 'Password tidak boleh kosong');
+      hasError = true;
     }
+    if (hasError) return;
 
     setState(() => _isLoading = true);
 
@@ -192,17 +206,74 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   void _showAlert(String title, String message) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
-          ),
-        ],
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: AppShadows.medium,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.dangerSurface,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                size: 32,
+                color: AppColors.danger,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: AppFonts.h3,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: AppFonts.body,
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Mengerti',
+                  style: TextStyle(fontSize: AppFonts.body, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -290,11 +361,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         onTap: () {
                           AppTime.clearMock();
                           Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Waktu dikembalikan ke sistem'),
-                              backgroundColor: AppColors.primary,
-                            ),
+                          AppAlert.toast(
+                            context,
+                            message: 'Waktu dikembalikan ke sistem',
+                            type: AlertType.info,
                           );
                         },
                         child: Container(
@@ -440,11 +510,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       );
                       AppTime.setMock(finalMock);
                       Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Mock time: ${_fmtDt(finalMock)}'),
-                          backgroundColor: AppColors.primary,
-                        ),
+                      AppAlert.toast(
+                        context,
+                        message: 'Mock time: ${_fmtDt(finalMock)}',
+                        type: AlertType.success,
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -581,9 +650,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       label: 'NIM / NIDN',
                                       placeholder: 'Masukkan NIM atau NIDN',
                                       isFocused: _nimFocused,
-                                      onFocusChange: (f) => setState(() => _nimFocused = f),
+                                      onFocusChange: (f) {
+                                        setState(() => _nimFocused = f);
+                                        if (f) setState(() => _nimError = null);
+                                      },
                                       keyboardType: TextInputType.number,
                                       onSubmitted: (_) => _passwordFocus.requestFocus(),
+                                      errorText: _nimError,
                                     ),
                                     const SizedBox(height: 20),
 
@@ -593,10 +666,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       label: 'Password',
                                       placeholder: '••••••••',
                                       isFocused: _pwFocused,
-                                      onFocusChange: (f) => setState(() => _pwFocused = f),
+                                      onFocusChange: (f) {
+                                        setState(() => _pwFocused = f);
+                                        if (f) setState(() => _pwError = null);
+                                      },
                                       isPassword: true,
                                       focusNode: _passwordFocus,
                                       onSubmitted: (_) => _handleLogin(),
+                                      errorText: _pwError,
                                     ),
                                     const SizedBox(height: 32),
 
@@ -752,7 +829,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     FocusNode? focusNode,
     TextInputType? keyboardType,
     ValueChanged<String>? onSubmitted,
+    String? errorText,
   }) {
+    final bool hasError = errorText != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -786,11 +865,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.borderLight, width: 1.5),
+              borderSide: BorderSide(color: hasError ? AppColors.danger : AppColors.borderLight, width: hasError ? 2 : 1.5),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+              borderSide: BorderSide(color: hasError ? AppColors.danger : AppColors.primary, width: 2),
             ),
             suffixIcon: isPassword
                 ? GestureDetector(
@@ -807,6 +886,24 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 : null,
           ),
         ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(left: 4, top: 6),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 14, color: AppColors.danger),
+                const SizedBox(width: 4),
+                Text(
+                  errorText,
+                  style: const TextStyle(
+                    fontSize: AppFonts.small,
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }

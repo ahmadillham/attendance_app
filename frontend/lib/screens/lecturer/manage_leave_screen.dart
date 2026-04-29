@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../constants/theme.dart';
 import '../../providers/lecturer_provider.dart';
 import '../../services/api_service.dart';
+import '../../widgets/app_alert.dart';
 
 /// Manage Leave Requests — approve/reject with tabs
 class ManageLeaveScreen extends StatefulWidget {
@@ -415,11 +416,10 @@ class _ManageLeaveScreenState extends State<ManageLeaveScreen> with SingleTicker
                       noteController.text.isEmpty ? null : noteController.text,
                     );
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(success ? 'Berhasil memproses perizinan' : 'Gagal, coba lagi.'),
-                          backgroundColor: success ? AppColors.success : AppColors.danger,
-                        ),
+                      AppAlert.toast(
+                        context,
+                        message: success ? 'Berhasil memproses perizinan' : 'Gagal, coba lagi.',
+                        type: success ? AlertType.success : AlertType.error,
                       );
                     }
                   },

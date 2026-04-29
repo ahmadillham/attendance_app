@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/theme.dart';
 import '../../providers/lecturer_provider.dart';
+import '../../widgets/app_alert.dart';
 
 /// Course Attendance Recap — table view of students × meetings
 class CourseAttendanceScreen extends StatefulWidget {
@@ -295,8 +296,10 @@ class _CourseAttendanceScreenState extends State<CourseAttendanceScreen> {
                     if (success) {
                       await provider.fetchCourseAttendance(widget.courseId);
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Status berhasil diubah')),
+                        AppAlert.toast(
+                          context,
+                          message: 'Status berhasil diubah',
+                          type: AlertType.success,
                         );
                       }
                     }
