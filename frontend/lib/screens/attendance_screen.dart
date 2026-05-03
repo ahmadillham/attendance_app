@@ -488,7 +488,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                   // Top bar
                   Container(
                     padding: EdgeInsets.only(
-                      top: MediaQuery.of(context).padding.top + 8,
+                      top: MediaQuery.paddingOf(context).top + 8,
                       left: 16,
                       right: 16,
                       bottom: 12,
@@ -580,22 +580,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _livenessPrompt != null
-                            ? _livenessPrompt!
-                            : _isScanning
-                                ? 'Memindai wajah…'
-                                : 'Posisikan wajah di dalam bingkai',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: _livenessPrompt != null ? AppFonts.body : AppFonts.caption,
-                          fontWeight: _livenessPrompt != null ? FontWeight.w400 : FontWeight.normal,
-                          color: _livenessPrompt != null
-                              ? AppColors.accent
-                              : Colors.white.withValues(alpha: 0.85),
-                        ),
-                      ),
+                      const SizedBox.shrink(),
                     ],
                   ),
 

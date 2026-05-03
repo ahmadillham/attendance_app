@@ -2,7 +2,7 @@ const prisma = require('../lib/prisma');
 
 const getSchedules = async (req, res) => {
     try {
-        const { dayOfWeek } = req.query;
+        const { dayOfWeek, date } = req.query;
         const studentId = req.user.id;
         
         // Get courses this student is enrolled in
@@ -29,11 +29,17 @@ const getSchedules = async (req, res) => {
             orderBy: { startTime: 'asc' },
         });
 
-        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+        // Use client date for mock time support, fallback to server time
+        const baseDate = date ? new Date(date) : new Date();
+        const startOfDay = new Date(baseDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(baseDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
         const todaysAttendances = await prisma.attendance.findMany({
             where: {
                 studentId,
-                date: { gte: twelveHoursAgo }
+                date: { gte: startOfDay, lte: endOfDay }
             },
             select: { courseId: true }
         });

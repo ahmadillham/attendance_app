@@ -36,15 +36,15 @@ enum DayOfWeek {
 
 model Student {
   id             String         @id @default(uuid())
-  studentId      String         @unique 
+  studentId      String         @unique
   name           String
   email          String         @unique
   phone          String?
   department     String
   faculty        String
   semester       Int
-  password       String         
-  faceDescriptor Json?          
+  password       String
+  faceDescriptor Json?
   attendances    Attendance[]
   leaveRequests  LeaveRequest[]
   enrollments    Enrollment[]
@@ -93,8 +93,8 @@ model Enrollment {
 model Schedule {
   id             String         @id @default(uuid())
   dayOfWeek      DayOfWeek
-  startTime      String         
-  endTime        String         
+  startTime      String
+  endTime        String
   room           String
   courseId        String
   course         Course         @relation(fields: [courseId], references: [id])
@@ -118,11 +118,11 @@ model Attendance {
 
 model LeaveRequest {
   id             String         @id @default(uuid())
-  reason         String         
+  reason         String
   description    String?        @db.Text
-  evidenceUrl    String?        
+  evidenceUrl    String?
   status         LeaveStatus    @default(PENDING)
-  date           DateTime       
+  date           DateTime
   studentId      String
   student        Student        @relation(fields: [studentId], references: [id])
   courseId       String
@@ -134,4 +134,3 @@ model LeaveRequest {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 }
-

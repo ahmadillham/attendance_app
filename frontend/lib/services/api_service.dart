@@ -191,10 +191,11 @@ class ApiService {
       const dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
       final todayDay = dayNames[AppTime.now().weekday - 1];
 
+      final dateStr = AppTime.now().toIso8601String();
       // Fetch both schedules and profile in parallel
       final results = await Future.wait([
         _get<List<ScheduleItem>>(
-          '/schedules?dayOfWeek=$todayDay',
+          '/schedules?dayOfWeek=$todayDay&date=$dateStr',
           parser: (json) => (json as List)
               .map((data) => ScheduleItem.fromJson(data))
               .toList(),
@@ -312,8 +313,9 @@ class ApiService {
 
   static Future<List<CourseAttendance>> getAttendanceHistory() async {
     try {
+      final dateStr = AppTime.now().toIso8601String();
       return await _get<List<CourseAttendance>>(
-        '/attendance/history',
+        '/attendance/history?date=$dateStr',
         parser: (json) {
           final jsonList = json as List;
           final Map<String, CourseAttendance> courseMap = {};

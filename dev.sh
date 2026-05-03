@@ -24,8 +24,8 @@ BACKEND_PID=$!
 sleep 3
 
 # 3. Start Flutter
-echo -e "${YELLOW} Starting Flutter...${NC}"
-cd frontend && flutter run
+echo -e "${YELLOW} Starting Flutter (${FLUTTER_MODE:---debug})...${NC}"
+cd frontend && flutter run ${FLUTTER_MODE:---debug}
 
 # Cleanup: kill backend when Flutter exits
 echo -e "${YELLOW} Stopping backend...${NC}"

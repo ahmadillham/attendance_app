@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../constants/theme.dart';
-import '../constants/mock_data.dart';
 import '../services/api_service.dart';
 import '../providers/app_provider.dart';
 import '../widgets/section_label.dart';
@@ -35,8 +34,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+      builder: (ctx) => SingleChildScrollView(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
         child: Container(
           decoration: const BoxDecoration(
             color: AppColors.surface,
@@ -138,10 +137,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       confirmColor: AppColors.danger,
       icon: Icons.logout_rounded,
       onConfirm: () async {
+        final navigator = Navigator.of(context, rootNavigator: true);
+        final appProvider = context.read<AppProvider>();
+        
         await ApiService.clearToken();
-        if (!context.mounted) return;
-        context.read<AppProvider>().clearData();
-        Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (_) => false);
+        if (!mounted) return;
+        
+        appProvider.clearData();
+        navigator.pushNamedAndRemoveUntil('/login', (_) => false);
       },
     );
   }
@@ -160,14 +163,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
-    final student = provider.studentProfile ?? mockStudent;
-    final attendancePercent = student.attendanceSummary.percentage;
+    final student = provider.studentProfile;
 
-    if (provider.isLoadingProfile && provider.studentProfile == null) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-      );
+    if (student == null) {
+      if (provider.isLoadingProfile) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        );
+      }
+      return const SizedBox(); // Return empty when data is cleared (e.g. during logout)
     }
 
     return Scaffold(
@@ -189,7 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 12,
+                top: MediaQuery.paddingOf(context).top + 12,
                 bottom: 24,
                 left: 20,
                 right: 20,

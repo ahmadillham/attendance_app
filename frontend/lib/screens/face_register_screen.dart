@@ -219,7 +219,7 @@ class _FaceRegisterScreenState extends State<FaceRegisterScreen>
                 // Top dark bar
                 Container(
                   padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 8,
+                    top: MediaQuery.paddingOf(context).top + 8,
                     left: 16,
                     right: 16,
                     bottom: 12,
@@ -330,20 +330,7 @@ class _FaceRegisterScreenState extends State<FaceRegisterScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _isRegistering
-                          ? 'Memindai wajah…'
-                          : 'Posisikan wajah di dalam bingkai',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: AppFonts.body,
-                        fontWeight: FontWeight.w500,
-                        color: _isRegistering
-                            ? AppColors.primary
-                            : Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
+                    const SizedBox.shrink(),
                   ],
                 ),
 
@@ -359,35 +346,7 @@ class _FaceRegisterScreenState extends State<FaceRegisterScreen>
                   ),
                   child: Column(
                     children: [
-                      // Instruction chip
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: const Color(0x26FFFFFF),
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              size: 18,
-                              color: Colors.white.withValues(alpha: 0.7),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Pastikan pencahayaan cukup. Lepaskan kacamata dan topi.',
-                                style: TextStyle(
-                                  fontSize: AppFonts.caption,
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
+
 
                       // Capture button
                       SizedBox(
@@ -445,7 +404,7 @@ class _FaceRegisterScreenState extends State<FaceRegisterScreen>
             right: 0,
             child: Container(
               padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 8,
+                top: MediaQuery.paddingOf(context).top + 8,
                 left: 16,
                 right: 16,
                 bottom: 12,

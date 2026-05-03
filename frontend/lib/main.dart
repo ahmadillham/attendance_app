@@ -42,7 +42,7 @@ class AbsensiApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LecturerProvider()),
       ],
       child: MaterialApp(
-        title: 'Absensi Kuliah',
+        title: 'Shusseki',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         initialRoute: '/splash',
@@ -121,7 +121,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FadeIndexedStack(
+      body: LazyIndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
@@ -239,7 +239,7 @@ class _LecturerMainScreenState extends State<LecturerMainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FadeIndexedStack(
+      body: LazyIndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
@@ -317,38 +317,38 @@ class _LecturerMainScreenState extends State<LecturerMainScreen> {
   }
 }
 
-/// A custom IndexedStack that provides a fade transition when changing tabs.
-class FadeIndexedStack extends StatefulWidget {
+/// Lazy IndexedStack — only builds tabs when first visited.
+/// Uses Flutter's built-in IndexedStack which skips layout/paint
+/// for non-active children, preventing keyboard-triggered rebuilds
+/// from affecting inactive tabs.
+class LazyIndexedStack extends StatefulWidget {
   final int index;
   final List<Widget> children;
-  final Duration duration;
 
-  const FadeIndexedStack({
+  const LazyIndexedStack({
     super.key,
     required this.index,
     required this.children,
-    this.duration = const Duration(milliseconds: 250),
   });
 
   @override
-  State<FadeIndexedStack> createState() => _FadeIndexedStackState();
+  State<LazyIndexedStack> createState() => _LazyIndexedStackState();
 }
 
-class _FadeIndexedStackState extends State<FadeIndexedStack> {
+class _LazyIndexedStackState extends State<LazyIndexedStack> {
+  final Set<int> _initializedIndexes = {};
+
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    _initializedIndexes.add(widget.index);
+
+    return IndexedStack(
+      index: widget.index,
       children: List.generate(widget.children.length, (i) {
-        final isActive = i == widget.index;
-        return IgnorePointer(
-          ignoring: !isActive,
-          child: AnimatedOpacity(
-            opacity: isActive ? 1.0 : 0.0,
-            duration: widget.duration,
-            curve: Curves.easeInOut,
-            child: widget.children[i],
-          ),
-        );
+        if (_initializedIndexes.contains(i)) {
+          return widget.children[i];
+        }
+        return const SizedBox.shrink();
       }),
     );
   }

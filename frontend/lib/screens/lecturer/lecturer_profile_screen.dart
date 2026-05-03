@@ -73,7 +73,7 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
                     ),
                   ),
                   padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 12,
+                    top: MediaQuery.paddingOf(context).top + 12,
                     bottom: 24,
                     left: 20,
                     right: 20,
@@ -336,8 +336,8 @@ class _LecturerProfileScreenState extends State<LecturerProfileScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+      builder: (ctx) => SingleChildScrollView(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
         child: Container(
           decoration: const BoxDecoration(
             color: AppColors.surface,

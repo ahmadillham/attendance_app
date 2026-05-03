@@ -346,8 +346,8 @@ class _ManageLeaveScreenState extends State<ManageLeaveScreen> with SingleTicker
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+      builder: (ctx) => SingleChildScrollView(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
         child: Container(
           decoration: const BoxDecoration(
             color: AppColors.surface,

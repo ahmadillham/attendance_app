@@ -98,7 +98,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
               ),
               padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 10,
+                top: MediaQuery.paddingOf(context).top + 10,
                 bottom: 20,
                 left: 20,
                 right: 20,

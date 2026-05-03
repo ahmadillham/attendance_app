@@ -338,7 +338,7 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: MediaQuery.of(context).padding.top + 12,
+      top: MediaQuery.paddingOf(context).top + 12,
       left: 16,
       right: 16,
       child: SlideTransition(

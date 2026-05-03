@@ -26,7 +26,7 @@ class DashboardHeader extends StatelessWidget {
         ),
       ),
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 12,
+        top: MediaQuery.paddingOf(context).top + 12,
         bottom: 24,
         left: 20,
         right: 20,

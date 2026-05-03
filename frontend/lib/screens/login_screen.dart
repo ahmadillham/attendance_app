@@ -45,6 +45,22 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   final LocalAuthentication _localAuth = LocalAuthentication();
 
+  static const _mahasiswaList = [
+    {'name': 'Ahmad Bahrudin', 'id': '241101052'},
+    {'name': 'Chamelia Qolbu', 'id': '241101033'},
+    {'name': 'Moris Gede', 'id': '241101061'},
+  ];
+
+  static const _dosenList = [
+    {'name': 'Dr. Mivan Ariful', 'id': '198501012001'},
+    {'name': 'M. Jauhar Fikri', 'id': '198501012002'},
+    {'name': 'Guruh Putro D', 'id': '198501012003'},
+    {'name': 'Zakki Alawi', 'id': '198501012004'},
+    {'name': 'Dwi Issadari', 'id': '198501012005'},
+    {'name': 'Mula Agung', 'id': '198501012006'},
+    {'name': 'Afnil Efan Pajri', 'id': '198501012007'},
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -328,7 +344,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 topRight: Radius.circular(20),
               ),
             ),
-            padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(ctx).viewInsets.bottom + 32),
+            padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.viewInsetsOf(ctx).bottom + 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -548,6 +564,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       },
       behavior: HitTestBehavior.translucent,
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         backgroundColor: AppColors.primary,
         body: AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.light.copyWith(
@@ -556,9 +573,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           child: Column(
             children: [
               // Blue Header Area
-              Container(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top + 40,
+              RepaintBoundary(
+                child: Container(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.paddingOf(context).top + 40,
                   bottom: 30,
                   left: 24,
                   right: 24,
@@ -568,43 +586,54 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   opacity: _fadeAnim,
                   child: SlideTransition(
                     position: _slideAnim,
-                    child: Column(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Logo
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
+                        const Row(
+                          children: [
+                            Text(
+                              'Shusseki',
+                              style: TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                letterSpacing: 1.0,
+                              ),
                             ),
-                          ),
-                          child: const Icon(
-                            Icons.school,
-                            size: 32,
-                            color: AppColors.white,
-                          ),
+                            SizedBox(width: 8),
+                            Icon(Icons.school, color: Colors.white, size: 32),
+                          ],
                         ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Absensi Kuliah',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.white,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Sistem Presensi Pintar',
-                          style: TextStyle(
-                            fontSize: AppFonts.caption,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.white.withValues(alpha: 0.8),
-                            letterSpacing: 1.0,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GestureDetector(
+                                onTap: _showTimeMockerModal,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.access_time, color: AppColors.white),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () => _showQuickLoginSheet(context),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.person, color: AppColors.white),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -612,38 +641,57 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ),
                 ),
               ),
+            ),
 
               // White Bottom Sheet Area
               Expanded(
                 child: Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(
-                    color: AppColors.surface,
+                    color: Colors.white,
                     borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(36),
-                      topRight: Radius.circular(36),
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
                     ),
                   ),
                   child: ClipRRect(
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(36),
-                      topRight: Radius.circular(36),
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
                     ),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(28, 40, 28, 32),
-                      child: FadeTransition(
-                        opacity: _fadeAnim,
-                        child: SlideTransition(
-                          position: _slideAnim,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(28, 40, 28, 32),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight - 72, // subtract top and bottom padding
+                            ),
+                            child: FadeTransition(
+                              opacity: _fadeAnim,
+                              child: SlideTransition(
+                                position: _slideAnim,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
                               // Form Area
                               Container(
                                 key: _formCardKey,
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    const SizedBox(height: 10),
+                                    const Text(
+                                      'Sign In',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF333333),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 36),
                                     // NIM / NIDN Input
                                     _buildInputField(
                                       controller: _nimController,
@@ -678,17 +726,27 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                     const SizedBox(height: 32),
 
                                     // Login Button
-                                    SizedBox(
+                                    Container(
                                       width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.primary.withValues(alpha: 0.3),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 6),
+                                          ),
+                                        ],
+                                      ),
                                       child: ElevatedButton(
                                         onPressed: _isLoading ? null : () => _handleLogin(),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: AppColors.primary,
                                           disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.75),
-                                          foregroundColor: AppColors.white,
+                                          foregroundColor: Colors.white,
                                           padding: const EdgeInsets.symmetric(vertical: 18),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(14),
+                                            borderRadius: BorderRadius.circular(8),
                                           ),
                                           elevation: 0,
                                         ),
@@ -702,105 +760,54 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                 ),
                                               )
                                             : const Text(
-                                                'Masuk',
+                                                'Sign In',
                                                 style: TextStyle(
-                                                  fontSize: AppFonts.body,
+                                                  fontSize: 16,
                                                   fontWeight: FontWeight.w600,
+                                                  letterSpacing: 0.5,
                                                 ),
                                               ),
                                       ),
                                     ),
                                     const SizedBox(height: 24),
 
-                                    // Biometric OR line
-                                    if (_biometricAvailable) ...[
-                                      const SizedBox(height: 16),
-                                      Row(
-                                        children: [
-                                          Expanded(child: Divider(color: AppColors.borderLight)),
-                                          const Padding(
-                                            padding: EdgeInsets.symmetric(horizontal: 16),
-                                            child: Text(
-                                              'Atau masuk dengan',
-                                              style: TextStyle(
-                                                fontSize: AppFonts.caption,
-                                                color: AppColors.textMuted,
-                                              ),
-                                            ),
-                                          ),
-                                          Expanded(child: Divider(color: AppColors.borderLight)),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 24),
 
-                                      // Biometric Button
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          InkWell(
-                                            onTap: _handleBiometricLogin,
-                                            borderRadius: BorderRadius.circular(16),
-                                            child: Container(
-                                              width: 64,
-                                              height: 64,
-                                              decoration: BoxDecoration(
-                                                color: AppColors.background,
-                                                borderRadius: BorderRadius.circular(16),
-                                                border: Border.all(color: AppColors.borderLight),
-                                              ),
-                                              child: Icon(
-                                                _getBiometricIcon(),
-                                                size: 32,
-                                                color: AppColors.primary,
-                                              ),
+
+                                    if (_biometricAvailable) ...[
+                                      const SizedBox(height: 32),
+                                      Center(
+                                        child: InkWell(
+                                          onTap: _handleBiometricLogin,
+                                          borderRadius: BorderRadius.circular(16),
+                                          child: Container(
+                                            width: 56,
+                                            height: 56,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(16),
+                                              border: Border.all(color: const Color(0xFFE0E0E0)),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.05),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 4),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Icon(
+                                              _getBiometricIcon(),
+                                              size: 28,
+                                              color: AppColors.primary,
                                             ),
                                           ),
-                                        ],
+                                        ),
                                       ),
                                     ],
 
                                     const SizedBox(height: 48),
 
-                                    // Dev Mode: Quick Login
-                                    Center(
-                                      child: Column(
-                                        children: [
-                                          const Text(
-                                            'Dev Mode: Quick Login',
-                                            style: TextStyle(
-                                              fontSize: AppFonts.caption,
-                                              color: AppColors.textMuted,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              _buildRoleDropdown(
-                                                title: 'Mahasiswa',
-                                                items: [
-                                                  {'name': 'Ahmad Bahrudin', 'id': '241101052'},
-                                                ],
-                                              ),
-                                              const SizedBox(width: 12),
-                                              _buildRoleDropdown(
-                                                title: 'Dosen',
-                                                items: [
-                                                  {'name': 'Dr. Mivan Ariful', 'id': '198501012001'},
-                                                  {'name': 'M. Jauhar Fikri', 'id': '198501012002'},
-                                                  {'name': 'Guruh Putro D', 'id': '198501012003'},
-                                                  {'name': 'Zakki Alawi', 'id': '198501012004'},
-                                                  {'name': 'Dwi Issadari', 'id': '198501012005'},
-                                                  {'name': 'Mula Agung', 'id': '198501012006'},
-                                                  {'name': 'Afnil Efan Pajri', 'id': '198501012007'},
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+
+                                    const KeyboardSpacer(),
                                   ],
                                 ),
                               ),
@@ -809,15 +816,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-            ],
+            ),
           ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  ),
+),
+      );
+    }
 
   Widget _buildInputField({
     required TextEditingController controller,
@@ -836,13 +846,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          padding: const EdgeInsets.only(left: 4, bottom: 4),
           child: Text(
             label,
             style: const TextStyle(
-              fontSize: AppFonts.caption,
+              fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
+              color: Color(0xFF555555),
             ),
           ),
         ),
@@ -853,22 +863,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           obscureText: isPassword && !_showPassword,
           onSubmitted: onSubmitted,
           style: const TextStyle(
-            fontSize: AppFonts.body,
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w500,
+            fontSize: 15,
+            color: Color(0xFF333333),
+            fontWeight: FontWeight.w400,
           ),
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w400),
-            filled: true,
-            fillColor: AppColors.white,
-            contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: hasError ? AppColors.danger : AppColors.borderLight, width: hasError ? 2 : 1.5),
+            hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontWeight: FontWeight.w400),
+            filled: false,
+            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: hasError ? AppColors.danger : const Color(0xFFE0E0E0), width: hasError ? 2 : 1),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
+            focusedBorder: UnderlineInputBorder(
               borderSide: BorderSide(color: hasError ? AppColors.danger : AppColors.primary, width: 2),
             ),
             suffixIcon: isPassword
@@ -878,8 +885,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: Icon(
                         _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        size: 22,
-                        color: AppColors.textMuted,
+                        size: 20,
+                        color: const Color(0xFFBDBDBD),
                       ),
                     ),
                   )
@@ -908,65 +915,170 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildRoleDropdown({required String title, required List<Map<String, String>> items}) {
-    return PopupMenuButton<String>(
-      onSelected: (String id) {
-        _nimController.text = id;
-        _passwordController.text = 'Password123';
-        _handleLogin();
-      },
-      color: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      itemBuilder: (BuildContext context) {
-        return items.map((item) {
-          return PopupMenuItem<String>(
-            value: item['id'],
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item['name']!,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
-                  ),
+
+
+  void _showQuickLoginSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDDDDDD),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                Text(
-                  item['id']!,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.flash_on, color: AppColors.primary, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Quick Login',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF333333),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        }).toList();
+              ),
+              const Divider(height: 1, color: Color(0xFFF0F0F0)),
+              // Mahasiswa Section
+              _buildQuickLoginSection(
+                ctx: ctx,
+                icon: Icons.school_outlined,
+                title: 'Mahasiswa',
+                items: _mahasiswaList,
+              ),
+              const Divider(height: 1, indent: 20, endIndent: 20, color: Color(0xFFF0F0F0)),
+              // Dosen Section
+              _buildQuickLoginSection(
+                ctx: ctx,
+                icon: Icons.person_outline,
+                title: 'Dosen',
+                items: _dosenList,
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.borderLight),
+    );
+  }
+
+  Widget _buildQuickLoginSection({
+    required BuildContext ctx,
+    required IconData icon,
+    required String title,
+    required List<Map<String, String>> items,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+          child: Row(
+            children: [
+              Icon(icon, size: 16, color: AppColors.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
+        ...items.map((item) {
+          return InkWell(
+            onTap: () {
+              Navigator.pop(ctx);
+              _nimController.text = item['id']!;
+              _passwordController.text = 'Password123';
+              _handleLogin();
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      item['name']!.substring(0, 1).toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['name']!,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF333333),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item['id']!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFFCCCCCC)),
+                ],
               ),
             ),
-            const SizedBox(width: 4),
-            const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary, size: 18),
-          ],
-        ),
-      ),
+          );
+        }),
+      ],
     );
+  }
+}
+
+class KeyboardSpacer extends StatelessWidget {
+  const KeyboardSpacer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(height: MediaQuery.viewInsetsOf(context).bottom);
   }
 }
