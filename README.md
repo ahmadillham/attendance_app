@@ -52,3 +52,6 @@ Jika Anda hanya ingin menjalankan seeding ulang (menambahkan data mahasiswa, dos
 cd backend
 npx prisma db seed
 ```
+
+# kill port
+lsof -ti :3000 | xargs -r kill -9
