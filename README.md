@@ -54,4 +54,6 @@ npx prisma db seed
 ```
 
 # kill port
+```bash
 lsof -ti :3000 | xargs -r kill -9
+```
