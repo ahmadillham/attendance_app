@@ -572,16 +572,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
           child: Column(
             children: [
-              // Blue Header Area
-              RepaintBoundary(
+              // Blue Header Area (1/3 of screen)
+              Expanded(
+                flex: 1,
+                child: RepaintBoundary(
                 child: Container(
                   padding: EdgeInsets.only(
-                    top: MediaQuery.paddingOf(context).top + 40,
-                  bottom: 30,
+                    top: MediaQuery.paddingOf(context).top + 16,
                   left: 24,
                   right: 24,
                 ),
                 width: double.infinity,
+                alignment: Alignment.center,
                 child: FadeTransition(
                   opacity: _fadeAnim,
                   child: SlideTransition(
@@ -641,10 +643,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ),
                 ),
               ),
+              ),
             ),
 
-              // White Bottom Sheet Area
+              // White Bottom Sheet Area (2/3 of screen)
               Expanded(
+                flex: 2,
                 child: Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(

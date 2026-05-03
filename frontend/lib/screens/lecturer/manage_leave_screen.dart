@@ -149,6 +149,27 @@ class _ManageLeaveScreenState extends State<ManageLeaveScreen> with SingleTicker
         statusLabel = 'Pending';
     }
 
+    // Map backend reason value to Indonesian label
+    final String rawReason = leave['reason'] ?? '';
+    String reasonLabel = rawReason;
+    switch (rawReason) {
+      case 'sick':
+        reasonLabel = 'Sakit';
+        break;
+      case 'family':
+        reasonLabel = 'Urusan Keluarga';
+        break;
+      case 'academic':
+        reasonLabel = 'Kegiatan Akademik';
+        break;
+      case 'emergency':
+        reasonLabel = 'Musibah / Force Majeure';
+        break;
+      case 'other':
+        reasonLabel = 'Lainnya';
+        break;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -219,7 +240,7 @@ class _ManageLeaveScreenState extends State<ManageLeaveScreen> with SingleTicker
 
             // Reason & Description
             Text(
-              leave['course']?['name'] != null ? '${leave['reason']} - ${leave['course']['name']}' : (leave['reason'] ?? ''),
+              leave['course']?['name'] != null ? '$reasonLabel - ${leave['course']['name']}' : reasonLabel,
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
             ),
             if (leave['description'] != null && leave['description'].toString().isNotEmpty) ...[

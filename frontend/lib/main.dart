@@ -118,6 +118,21 @@ class _MainScreenState extends State<MainScreen> {
     ProfileScreen(),
   ];
 
+  void _refreshTabData(int index) {
+    final provider = context.read<AppProvider>();
+    switch (index) {
+      case 0:
+        provider.fetchDashboardData(forceRefresh: true);
+        break;
+      case 2:
+        provider.fetchHistoryData(forceRefresh: true);
+        break;
+      case 3:
+        provider.fetchProfile(forceRefresh: true);
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -147,7 +162,10 @@ class _MainScreenState extends State<MainScreen> {
           ),
           child: BottomNavigationBar(
             currentIndex: _currentIndex,
-            onTap: (index) => setState(() => _currentIndex = index),
+            onTap: (index) {
+              setState(() => _currentIndex = index);
+              _refreshTabData(index);
+            },
             type: BottomNavigationBarType.fixed,
             backgroundColor: AppColors.white,
             selectedItemColor: AppColors.primary,

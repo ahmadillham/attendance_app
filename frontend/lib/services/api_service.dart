@@ -178,9 +178,14 @@ class ApiService {
       } else {
         throw Exception('Kredensial tidak valid');
       }
+    } on TimeoutException {
+      throw Exception('Koneksi timeout. Pastikan Anda terhubung ke internet.');
     } catch (e) {
       if (e.toString().contains('Kredensial tidak valid')) rethrow;
-      throw Exception('Server tidak dapat dihubungi. Pastikan backend berjalan: $e');
+      if (e.toString().contains('SocketException') || e.toString().contains('Failed host lookup')) {
+        throw Exception('Tidak ada koneksi internet. Silakan periksa jaringan Anda.');
+      }
+      throw Exception('Server tidak dapat dihubungi. Pastikan backend berjalan.');
     }
   }
 

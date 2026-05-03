@@ -644,7 +644,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                         Builder(builder: (context) {
                           final bool windowOpen = _isWithinAttendanceWindow();
                           final bool hasAttended = _activeSchedule?.status == 'attended';
-                          final bool buttonEnabled = windowOpen && !_isScanning && !hasAttended;
+                          final bool hasLeave = _activeSchedule?.hasLeaveRequest ?? false;
+                          final bool buttonEnabled = windowOpen && !_isScanning && !hasAttended && !hasLeave;
 
                           return AnimatedBuilder(
                             animation: _pulseAnim,
@@ -657,15 +658,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                               child: Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(AppRadius.md),
-                                  boxShadow: windowOpen ? AppShadows.glow : null,
+                                  boxShadow: windowOpen && !hasLeave ? AppShadows.glow : null,
                                 ),
                                 child: ElevatedButton(
                                   onPressed: buttonEnabled ? _handleCapture : null,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: windowOpen ? AppColors.primary : Colors.grey.shade600,
-                                    disabledBackgroundColor: windowOpen
-                                        ? AppColors.primary.withValues(alpha: 0.7)
-                                        : Colors.grey.shade700,
+                                    backgroundColor: hasLeave ? AppColors.warning : windowOpen ? AppColors.primary : Colors.grey.shade600,
+                                    disabledBackgroundColor: hasLeave
+                                        ? AppColors.warning.withValues(alpha: 0.7)
+                                        : windowOpen
+                                            ? AppColors.primary.withValues(alpha: 0.7)
+                                            : Colors.grey.shade700,
                                     foregroundColor: AppColors.white,
                                     disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
                                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -686,14 +689,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> with TickerProvider
                                       : Row(
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            Icon(hasAttended ? Icons.check_circle : windowOpen ? Icons.face : Icons.lock_clock, size: 22),
+                                            Icon(
+                                              hasLeave
+                                                  ? Icons.event_busy
+                                                  : hasAttended ? Icons.check_circle : windowOpen ? Icons.face : Icons.lock_clock,
+                                              size: 22,
+                                            ),
                                             const SizedBox(width: 10),
                                             Text(
-                                              hasAttended 
-                                                  ? 'Sudah Absen'
-                                                  : windowOpen
-                                                      ? 'Verifikasi Sekarang'
-                                                      : 'Di Luar Waktu Absensi',
+                                              hasLeave
+                                                  ? 'Izin Aktif – Tidak Bisa Absen'
+                                                  : hasAttended 
+                                                      ? 'Sudah Absen'
+                                                      : windowOpen
+                                                          ? 'Verifikasi Sekarang'
+                                                          : 'Di Luar Waktu Absensi',
                                               style: const TextStyle(
                                                 fontSize: AppFonts.body,
                                                 fontWeight: FontWeight.w400,

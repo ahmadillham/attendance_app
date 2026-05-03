@@ -45,9 +45,21 @@ const getSchedules = async (req, res) => {
         });
         const attendedCourseIds = new Set(todaysAttendances.map(a => a.courseId));
 
+        // Check for leave requests on the same day (any status except REJECTED)
+        const todaysLeaveRequests = await prisma.leaveRequest.findMany({
+            where: {
+                studentId,
+                date: { gte: startOfDay, lte: endOfDay },
+                status: { not: 'REJECTED' },
+            },
+            select: { courseId: true }
+        });
+        const leaveCourseIds = new Set(todaysLeaveRequests.map(l => l.courseId));
+
         const schedulesWithStatus = schedules.map(s => ({
             ...s,
-            hasAttended: attendedCourseIds.has(s.courseId)
+            hasAttended: attendedCourseIds.has(s.courseId),
+            hasLeaveRequest: leaveCourseIds.has(s.courseId),
         }));
 
         res.json(schedulesWithStatus);

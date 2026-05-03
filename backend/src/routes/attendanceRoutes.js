@@ -330,6 +330,21 @@ router.post(
         });
       }
 
+      // Security 4b: Check if student has a leave request for this course today
+      const existingLeave = await prisma.leaveRequest.findFirst({
+        where: {
+          studentId,
+          courseId,
+          date: { gte: startOfClientDay, lte: endOfClientDay },
+          status: { not: 'REJECTED' },
+        },
+      });
+      if (existingLeave) {
+        return res.status(409).json({
+          message: `Anda sudah mengajukan izin untuk mata kuliah ini hari ini. Absensi tidak dapat dilakukan.`,
+        });
+      }
+
       try {
         const attendance = await prisma.attendance.create({
           data: {

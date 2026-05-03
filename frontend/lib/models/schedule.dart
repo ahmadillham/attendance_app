@@ -7,6 +7,7 @@ class ScheduleItem {
   final String lecturer;
   final String status;
   final String? courseId;
+  final bool hasLeaveRequest;
 
   const ScheduleItem({
     required this.id,
@@ -16,6 +17,7 @@ class ScheduleItem {
     required this.lecturer,
     this.status = 'upcoming',
     this.courseId,
+    this.hasLeaveRequest = false,
   });
 
   factory ScheduleItem.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,7 @@ class ScheduleItem {
           : (course['lecturer'] ?? json['lecturer'] ?? 'Unknown'),
       status: json['hasAttended'] == true ? 'attended' : 'upcoming',
       courseId: json['courseId']?.toString() ?? course['id']?.toString(),
+      hasLeaveRequest: json['hasLeaveRequest'] == true,
     );
   }
 }

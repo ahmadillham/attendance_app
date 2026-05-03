@@ -135,6 +135,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       // Check if any class is within its attendance window
                       bool isWindowOpen = false;
                       bool isAttended = false;
+                      bool hasLeaveForCurrentClass = false;
                       String? windowCloseInfo; // when the current open window closes
                       String? nextWindowInfo; // when the next window opens
 
@@ -150,6 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           if (diff >= -earlyOpenMinutes && diff <= lateCloseMinutes) {
                             isWindowOpen = true;
                             if (item.status == 'attended') isAttended = true;
+                            if (item.hasLeaveRequest) hasLeaveForCurrentClass = true;
                             
                             final closeMin = startMinutes + lateCloseMinutes;
                             final h = closeMin ~/ 60;
@@ -185,13 +187,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         }
                       }
 
-                      final bool canAttend = isWindowOpen && !isAttended;
+                      final bool canAttend = isWindowOpen && !isAttended && !hasLeaveForCurrentClass;
 
                       return Opacity(
                         opacity: canAttend ? 1.0 : 0.5,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: AppColors.primary,
+                            color: hasLeaveForCurrentClass ? AppColors.warning : AppColors.primary,
                             borderRadius: BorderRadius.circular(AppRadius.lg),
                             boxShadow: canAttend ? AppShadows.card : null,
                           ),
@@ -199,7 +201,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: Material(
                             color: Colors.transparent,
                             child: InkWell(
-                              onTap: canAttend ? () => Navigator.of(context).pushNamed('/attendance') : null,
+                              onTap: canAttend ? () {
+                                Navigator.of(context).pushNamed('/attendance').then((_) {
+                                  if (context.mounted) {
+                                    context.read<AppProvider>().fetchDashboardData(forceRefresh: true);
+                                  }
+                                });
+                              } : null,
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Row(
@@ -212,7 +220,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Icon(
-                                        isAttended ? Icons.check_circle : canAttend ? Icons.face : Icons.lock_clock,
+                                        hasLeaveForCurrentClass
+                                            ? Icons.event_busy
+                                            : isAttended ? Icons.check_circle : canAttend ? Icons.face : Icons.lock_clock,
                                         size: 22,
                                         color: AppColors.white,
                                       ),
@@ -222,26 +232,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          const Text(
-                                            'Absensi',
-                                            style: TextStyle(
+                                          Text(
+                                            hasLeaveForCurrentClass ? 'Izin Aktif' : 'Absensi',
+                                            style: const TextStyle(
                                               fontSize: AppFonts.body,
                                               fontWeight: FontWeight.w500,
                                               color: AppColors.white,
                                             ),
                                           ),
                                           Text(
-                                            isAttended
-                                                ? 'Sudah absen untuk kelas ini'
-                                                : canAttend
-                                                    ? windowCloseInfo != null
-                                                        ? 'Batas absen sampai $windowCloseInfo'
-                                                        : 'Wajah & Lokasi'
-                                                    : nextWindowInfo != null
-                                                        ? 'Kelas berikutnya pukul $nextWindowInfo'
-                                                        : todaySchedules.isEmpty
-                                                            ? 'Tidak ada kelas hari ini'
-                                                            : 'Semua jendela absensi telah ditutup',
+                                            hasLeaveForCurrentClass
+                                                ? 'Anda sudah mengajukan izin untuk kelas ini'
+                                                : isAttended
+                                                    ? 'Sudah absen untuk kelas ini'
+                                                    : canAttend
+                                                        ? windowCloseInfo != null
+                                                            ? 'Batas absen sampai $windowCloseInfo'
+                                                            : 'Wajah & Lokasi'
+                                                        : nextWindowInfo != null
+                                                            ? 'Kelas berikutnya pukul $nextWindowInfo'
+                                                            : todaySchedules.isEmpty
+                                                                ? 'Tidak ada kelas hari ini'
+                                                                : 'Semua jendela absensi telah ditutup',
                                             style: TextStyle(
                                               fontSize: AppFonts.small,
                                               color: Colors.white.withValues(alpha: 0.9),
@@ -313,7 +325,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: canRequestLeave
-                                  ? () => Navigator.of(context).pushNamed('/leave-request')
+                                  ? () {
+                                      Navigator.of(context).pushNamed('/leave-request').then((_) {
+                                        if (context.mounted) {
+                                          context.read<AppProvider>().fetchDashboardData(forceRefresh: true);
+                                        }
+                                      });
+                                    }
                                   : null,
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
