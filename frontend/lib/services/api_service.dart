@@ -57,7 +57,7 @@ class ApiService {
 
   static const String _tokenKey = 'auth_token';
   static const String _roleKey = 'user_role';
-  static const Duration _defaultTimeout = Duration(seconds: 8);
+  static const Duration _defaultTimeout = Duration(seconds: 30);
   static const _secureStorage = FlutterSecureStorage();
 
   /// Mock data fallback hanya aktif di debug mode.
@@ -166,7 +166,7 @@ class ApiService {
         Uri.parse('$baseUrl/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'studentId': nim, 'password': password}),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
