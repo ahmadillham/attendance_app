@@ -8,8 +8,8 @@ export '../models/models.dart';
 
 // ─── Campus Geolocation ──────────────────────────────────────────
 class Campus {
-  static const double latitude = -7.160460;
-  static const double longitude = 111.853767;
+  static const double latitude = -7.167545;
+  static const double longitude = 111.892569;
   static const double allowedRadiusMeters = 200;
   static const String name = 'Universitas Nahdlatul Ulama Sunan Giri';
 }

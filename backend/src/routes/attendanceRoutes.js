@@ -27,8 +27,8 @@ const haversineDistance = (lat1, lon1, lat2, lon2) => {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-const CAMPUS_LAT = -7.16046;
-const CAMPUS_LNG = 111.853767;
+const CAMPUS_LAT = -7.167545;
+const CAMPUS_LNG = 111.892569;
 const ALLOWED_RADIUS = 200;
 
 // Minimum landmark movement (Euclidean pixel distance) required between

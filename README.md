@@ -13,6 +13,10 @@ Cara termudah dan paling direkomendasikan untuk menjalankan backend dan frontend
 ./dev.sh
 # Atau
 FLUTTER_MODE=--profile ./dev.sh
+# Atau
+flutter run --dart-define=API_URL=http://192.168.1.113:3000/api
+
+flutter build apk --dart-define=API_URL=http://192.168.1.15:3000/api
 ```
 
 Atau jika Anda ingin menjalankannya secara manual di terminal terpisah:
